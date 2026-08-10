@@ -70,20 +70,26 @@ Verified:
 - transactional complete-set persistence at positions 0 and 1
 - durable complete-set checkpoint recovery
 
-## Current
-
 ### Phase 9 — PORTRAITS Generation
 
-Implement:
 - sequential image generation with per-character durable checkpoints
 - local portrait persistence and authenticated retrieval
 - partial retry without regenerating completed portraits
+
+## Current
+
+### Phase 10 — CHAPTERS Generation
+
+Implement:
+- one validated opening-scene illustration prompt
+- transactional single-chapter persistence
+- durable checkpoint recovery after lost final completion
 
 Models:
 - gemini-3.6-flash
 - gemini-3.1-flash-lite-image
 
-### Phase 10 — Frontend
+### Phase 11 — Frontend
 
 Implement:
 - Identity
@@ -93,7 +99,7 @@ Implement:
 - pipeline state UI
 - retry/recovery
 
-### Phase 11 — Final Testing and Documentation
+### Phase 12 — Final Testing and Documentation
 
 - backend tests
 - frontend tests

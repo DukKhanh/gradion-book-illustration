@@ -18,6 +18,9 @@ import {
 } from 'vitest'
 
 import { createApp } from '../../app.js'
+import { GeminiBookController } from '../gemini-book/gemini-book.controller.js'
+import { GeminiBookRepository } from '../gemini-book/gemini-book.repository.js'
+import { GeminiBookService } from '../gemini-book/gemini-book.service.js'
 import { PipelineRepository } from '../pipeline/pipeline.repository.js'
 import {
   PipelineService,
@@ -37,6 +40,7 @@ describe('identity and projects HTTP API', () => {
   let app: ReturnType<typeof createApp>
   let userA: Agent
   let userB: Agent
+  let geminiUploadCalls: unknown[]
 
   beforeEach(async () => {
     client = createClient({ url: 'file::memory:' })
@@ -64,6 +68,9 @@ describe('identity and projects HTTP API', () => {
         step_error text,
         style text,
         gemini_book_file_uri text,
+        gemini_book_state text not null default 'IDLE',
+        gemini_book_started_at integer,
+        gemini_book_error text,
         gemini_book_interaction_id text,
         created_at integer not null,
         updated_at integer not null
@@ -80,10 +87,23 @@ describe('identity and projects HTTP API', () => {
       unsupportedPipelineExecutor,
       { staleAfterMs: 60_000 },
     )
+    geminiUploadCalls = []
+    const geminiBookService = new GeminiBookService(
+      new GeminiBookRepository(database),
+      new FileStorageService(storageDirectory),
+      {
+        uploadBook: async (input) => {
+          geminiUploadCalls.push(input)
+          return { uri: 'gemini://book-1' }
+        },
+      },
+      { apiKey: 'test-key', staleAfterMs: 60_000 },
+    )
     app = createApp({
       sessionController: new SessionController(sessionService),
       projectController: new ProjectController(projectService),
       pipelineService,
+      geminiBookController: new GeminiBookController(geminiBookService),
     })
     userA = request.agent(app)
     userB = request.agent(app)
@@ -210,6 +230,20 @@ describe('identity and projects HTTP API', () => {
     await userB
       .post(`/api/projects/${created.body.project.id}/pipeline/recover`)
       .expect(404)
+  })
+
+  it('does not let another user initialize a Gemini book reference', async () => {
+    await signIn(userA, 'a@example.com')
+    const created = await userA.post('/api/projects').send({
+      title: 'Gemini Book',
+      bookText: 'A book.',
+    })
+    await signIn(userB, 'b@example.com')
+
+    await userB
+      .post(`/api/projects/${created.body.project.id}/gemini-book`)
+      .expect(404)
+    expect(geminiUploadCalls).toEqual([])
   })
 })
 

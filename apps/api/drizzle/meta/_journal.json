@@ -15,6 +15,13 @@
       "when": 1786386585250,
       "tag": "0001_tough_unus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786393316883,
+      "tag": "0002_brainy_storm",
+      "breakpoints": true
     }
   ]
 }

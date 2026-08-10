@@ -50,6 +50,11 @@ const envSchema = z.object({
     .number()
     .positive()
     .default(180000),
+
+  GEMINI_BOOK_STALE_AFTER_MS: z.coerce
+    .number()
+    .positive()
+    .default(180000),
 })
 
 export const env = envSchema.parse(process.env)

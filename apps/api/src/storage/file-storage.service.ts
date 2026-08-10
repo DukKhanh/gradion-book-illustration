@@ -1,5 +1,6 @@
 import {
   mkdir,
+  readFile,
   rm,
   writeFile,
 } from 'node:fs/promises'
@@ -33,5 +34,9 @@ export class FileStorageService {
 
   async deleteBook(bookPath: string): Promise<void> {
     await rm(bookPath, { force: true })
+  }
+
+  async readBook(bookPath: string): Promise<string> {
+    return readFile(bookPath, 'utf8')
   }
 }

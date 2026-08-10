@@ -76,6 +76,20 @@ describe('identity and projects HTTP API', () => {
         updated_at integer not null
       )
     `)
+    await client.execute(`
+      create table characters (
+        id text primary key not null,
+        project_id text not null,
+        name text not null,
+        prompt text not null,
+        image_path text,
+        generation_status text not null default 'PENDING',
+        generation_error text,
+        position integer not null,
+        created_at integer not null,
+        updated_at integer not null
+      )
+    `)
 
     const sessionService = new SessionService(new UserRepository(database))
     const projectService = new ProjectService(
@@ -212,6 +226,28 @@ describe('identity and projects HTTP API', () => {
     await userA.get(`/api/projects/${projectId}`).expect(200)
   })
 
+  it('returns owned character cards in project detail only', async () => {
+    await signIn(userA, 'a@example.com')
+    const created = await userA.post('/api/projects').send({
+      title: 'Character Book', bookText: 'A book.',
+    })
+    const projectId = created.body.project.id as string
+    await client.execute({
+      sql: `insert into characters (
+        id, project_id, name, prompt, image_path, generation_status,
+        generation_error, position, created_at, updated_at
+      ) values ('character-1', ?, 'Mole', 'A detailed portrait prompt.', null, 'PENDING', null, 0, 1, 1)`,
+      args: [projectId],
+    })
+    expect((await userA.get(`/api/projects/${projectId}`)).body.project.characters)
+      .toEqual([expect.objectContaining({
+        id: 'character-1', name: 'Mole', position: 0,
+        generationStatus: 'PENDING', imagePath: null,
+      })])
+    await signIn(userB, 'b@example.com')
+    await userB.get(`/api/projects/${projectId}`).expect(404)
+  })
+
   it('requires a session and prevents other users from mutating pipeline state', async () => {
     await request(app)
       .post('/api/projects/project-1/pipeline/STYLE')
@@ -226,6 +262,9 @@ describe('identity and projects HTTP API', () => {
 
     await userB
       .post(`/api/projects/${created.body.project.id}/pipeline/STYLE`)
+      .expect(404)
+    await userB
+      .post(`/api/projects/${created.body.project.id}/pipeline/CHARACTERS`)
       .expect(404)
     await userB
       .post(`/api/projects/${created.body.project.id}/pipeline/recover`)

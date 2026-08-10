@@ -1,10 +1,12 @@
 import {
+  check,
   index,
   integer,
   sqliteTable,
   text,
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
 
 export const users = sqliteTable(
   'users',
@@ -137,6 +139,10 @@ export const characters = sqliteTable(
     ).on(
       table.projectId,
       table.position,
+    ),
+    check(
+      'characters_position_zero_or_one',
+      sql`${table.position} in (0, 1)`,
     ),
   ],
 )

@@ -1,4 +1,5 @@
 import {
+  access,
   mkdir,
   readFile,
   rm,
@@ -10,10 +11,14 @@ import { fileURLToPath } from 'node:url'
 const defaultBooksDirectory = fileURLToPath(
   new URL('../../../../data/books/', import.meta.url),
 )
+const defaultImagesDirectory = fileURLToPath(
+  new URL('../../../../data/images/', import.meta.url),
+)
 
 export class FileStorageService {
   constructor(
     private readonly booksDirectory = defaultBooksDirectory,
+    private readonly imagesDirectory = defaultImagesDirectory,
   ) {}
 
   async writeBook(input: {
@@ -38,5 +43,45 @@ export class FileStorageService {
 
   async readBook(bookPath: string): Promise<string> {
     return readFile(bookPath, 'utf8')
+  }
+
+  async writePortrait(input: {
+    userId: string
+    projectId: string
+    characterId: string
+    stepStartedAt: Date
+    bytes: Uint8Array
+  }): Promise<string> {
+    const directory = join(
+      this.imagesDirectory,
+      input.userId,
+      input.projectId,
+      'characters',
+      input.characterId,
+    )
+    const portraitPath = join(
+      directory,
+      `${input.stepStartedAt.getTime()}.png`,
+    )
+    await mkdir(directory, { recursive: true })
+    await writeFile(portraitPath, input.bytes)
+    return portraitPath
+  }
+
+  async readPortrait(portraitPath: string): Promise<Buffer> {
+    return readFile(portraitPath)
+  }
+
+  async portraitExists(portraitPath: string): Promise<boolean> {
+    try {
+      await access(portraitPath)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  async deletePortrait(portraitPath: string): Promise<void> {
+    await rm(portraitPath, { force: true })
   }
 }

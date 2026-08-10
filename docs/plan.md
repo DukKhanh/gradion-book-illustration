@@ -64,20 +64,26 @@ Verified:
 - persisted Gemini Files URI reuse
 - conditional STYLE persistence and durable checkpoint recovery
 
-## Current
-
 ### Phase 8 — CHARACTERS Generation
 
+- one or two validated adult-character prompts
+- transactional complete-set persistence at positions 0 and 1
+- durable complete-set checkpoint recovery
+
+## Current
+
+### Phase 9 — PORTRAITS Generation
+
 Implement:
-- one or two adult main-character prompts
-- atomic complete-set persistence at deterministic positions
-- durable CHARACTERS checkpoint and pipeline completion recovery
+- sequential image generation with per-character durable checkpoints
+- local portrait persistence and authenticated retrieval
+- partial retry without regenerating completed portraits
 
 Models:
 - gemini-3.6-flash
 - gemini-3.1-flash-lite-image
 
-### Phase 9 — Frontend
+### Phase 10 — Frontend
 
 Implement:
 - Identity
@@ -87,7 +93,7 @@ Implement:
 - pipeline state UI
 - retry/recovery
 
-### Phase 10 — Final Testing and Documentation
+### Phase 11 — Final Testing and Documentation
 
 - backend tests
 - frontend tests

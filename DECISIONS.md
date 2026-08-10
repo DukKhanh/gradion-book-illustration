@@ -180,3 +180,54 @@ challenged, corrected, or simplified.
 ## If I Had One More Day
 
 _To be completed near the end of the assessment._
+
+## Decision 4 — Preserve the failed step instead of clearing execution state
+
+**AI override #3**
+
+### Context
+
+During the Phase 4 pipeline design, Codex initially proposed clearing the
+running execution fields after both successful and failed execution.
+
+The existing persistence model does not have a separate `failedStep` field.
+Clearing `runningStep` after failure would therefore lose the identity of the
+step that must be retried.
+
+### Decision
+
+On successful execution:
+
+- advance `completedStep`;
+- clear `runningStep`;
+- clear `stepStartedAt`;
+- clear `stepError`;
+- return the pipeline to `IDLE`.
+
+On failed execution:
+
+- preserve `completedStep`;
+- keep the failed step in `runningStep`;
+- set `stepState` to `FAILED`;
+- clear `stepStartedAt`;
+- persist a safe error message.
+
+Explicit stale recovery follows the same rule: stale `RUNNING` work becomes
+`FAILED` while preserving the step identity.
+
+### Why I Overrode the AI Suggestion
+
+Clearing `runningStep` on failure discarded information required to retry the
+exact failed step.
+
+Adding another `failedStep` column would solve that problem but would introduce
+an additional state field and migration that are unnecessary for the current
+sequential pipeline.
+
+### Trade-off
+
+`runningStep` now represents the current active or retryable step rather than
+strictly a step that is executing at this exact moment.
+
+This slightly broadens the field's semantics, but keeps the persistence model
+small and makes retry behavior unambiguous.

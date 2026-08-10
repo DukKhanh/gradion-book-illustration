@@ -58,21 +58,26 @@ Verified:
 - atomic acquisition, failure, retry, and stale recovery
 - local `book.txt` retained as durable source of truth
 
-## Current
-
 ### Phase 7 — STYLE Generation
 
+- optional manual or structured AI-generated style
+- persisted Gemini Files URI reuse
+- conditional STYLE persistence and durable checkpoint recovery
+
+## Current
+
+### Phase 8 — CHARACTERS Generation
+
 Implement:
-- STYLE
-- optional user-supplied art direction
-- structured Gemini STYLE generation using the persisted book URI
-- validated, durable STYLE checkpoint and pipeline completion recovery
+- one or two adult main-character prompts
+- atomic complete-set persistence at deterministic positions
+- durable CHARACTERS checkpoint and pipeline completion recovery
 
 Models:
 - gemini-3.6-flash
 - gemini-3.1-flash-lite-image
 
-### Phase 8 — Frontend
+### Phase 9 — Frontend
 
 Implement:
 - Identity
@@ -82,7 +87,7 @@ Implement:
 - pipeline state UI
 - retry/recovery
 
-### Phase 9 — Final Testing and Documentation
+### Phase 10 — Final Testing and Documentation
 
 - backend tests
 - frontend tests

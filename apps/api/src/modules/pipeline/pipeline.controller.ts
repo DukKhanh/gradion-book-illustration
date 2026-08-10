@@ -32,6 +32,7 @@ export class PipelineController {
   ): Promise<void> => {
     try {
       await this.service.run(
+        req.session.userId!,
         singleParam(req.params.projectId),
         parseStep(req.params.step),
       )
@@ -48,6 +49,7 @@ export class PipelineController {
   ): Promise<void> => {
     try {
       await this.service.recoverStale(
+        req.session.userId!,
         singleParam(req.params.projectId),
       )
       res.status(200).json({ status: 'recovered' })

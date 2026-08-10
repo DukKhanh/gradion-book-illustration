@@ -231,3 +231,30 @@ strictly a step that is executing at this exact moment.
 
 This slightly broadens the field's semantics, but keeps the persistence model
 small and makes retry behavior unambiguous.
+
+---
+
+## Decision 5 — Use local server sessions for passwordless identity
+
+### Context
+
+The assessment needs lightweight name/email identity, authenticated project
+ownership, and sign-out. Introducing JWTs, refresh tokens, OAuth, or an
+external identity provider would add security and operational machinery that
+the local assessment does not need.
+
+### Decision
+
+Use `express-session` with an HTTP-only cookie. The server stores only the
+authenticated user ID in the session; project and pipeline services enforce
+ownership through user-scoped repository queries.
+
+The default memory session store is acceptable for this local phase. After a
+backend restart, users identify again with the same email and recover their
+persisted projects.
+
+### Trade-off
+
+Sessions are intentionally not durable across backend restarts. This avoids
+adding a session database or external infrastructure while keeping project data
+durable and ownership checks server-side.

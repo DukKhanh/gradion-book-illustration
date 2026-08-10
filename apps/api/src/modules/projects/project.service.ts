@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { HttpError } from '../../shared/http-error.js'
 import { FileStorageService } from '../../storage/file-storage.service.js'
-import type { ProjectRecord } from './project.repository.js'
+import type { ProjectCharacterRecord, ProjectRecord } from './project.repository.js'
 import { ProjectRepository } from './project.repository.js'
 
 const titleSchema = z.string().trim().min(1).max(200)
@@ -23,6 +23,20 @@ export type ProjectDto = {
     stepStartedAt: Date | null
     stepError: string | null
   }
+}
+
+export type ProjectCharacterDto = {
+  id: string
+  name: string
+  prompt: string
+  imagePath: string | null
+  generationStatus: string
+  generationError: string | null
+  position: number
+}
+
+export type ProjectDetailDto = ProjectDto & {
+  characters: ProjectCharacterDto[]
 }
 
 export class ProjectService {
@@ -75,12 +89,18 @@ export class ProjectService {
     return (await this.projects.listByUserId(userId)).map(toProjectDto)
   }
 
-  async detail(userId: string, projectId: string): Promise<ProjectDto> {
+  async detail(userId: string, projectId: string): Promise<ProjectDetailDto> {
     const project = await this.projects.findByIdForUser(projectId, userId)
     if (!project) {
       throw new HttpError('Project not found.', 404)
     }
-    return toProjectDto(project)
+    return {
+      ...toProjectDto(project),
+      characters: (await this.projects.listCharactersForProjectForUser(
+        projectId,
+        userId,
+      )).map(toProjectCharacterDto),
+    }
   }
 
   private resolveBookText(
@@ -124,6 +144,20 @@ export class ProjectService {
       throw new HttpError('Book text cannot be empty.', 400)
     }
     return content
+  }
+}
+
+function toProjectCharacterDto(
+  character: ProjectCharacterRecord,
+): ProjectCharacterDto {
+  return {
+    id: character.id,
+    name: character.name,
+    prompt: character.prompt,
+    imagePath: character.imagePath,
+    generationStatus: character.generationStatus,
+    generationError: character.generationError,
+    position: character.position,
   }
 }
 

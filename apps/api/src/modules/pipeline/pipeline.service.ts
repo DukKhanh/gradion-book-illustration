@@ -58,6 +58,8 @@ export interface PipelineExecutor {
     step: PipelineStep
     startedAt: Date
     isRetry: boolean
+    retryCompletedStep: PipelineStep | null
+    retryRunningStep: PipelineStep | null
     manualStyle?: unknown
   }): Promise<void>
 }
@@ -121,6 +123,8 @@ export class PipelineService {
         step,
         startedAt,
         isRetry: project.stepState === STEP_STATES.FAILED,
+        retryCompletedStep: project.completedStep,
+        retryRunningStep: project.runningStep,
         manualStyle: input.manualStyle,
       })
     } catch {

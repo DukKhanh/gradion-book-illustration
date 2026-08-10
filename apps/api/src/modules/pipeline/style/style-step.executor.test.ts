@@ -41,6 +41,8 @@ function executorInput(overrides: Partial<{
     step: PIPELINE_STEPS.STYLE,
     startedAt,
     isRetry: false,
+    retryCompletedStep: null,
+    retryRunningStep: null,
     manualStyle: undefined,
     ...overrides,
   }

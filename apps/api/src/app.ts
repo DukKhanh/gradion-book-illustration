@@ -10,11 +10,14 @@ import { createGeminiBookRouter } from './modules/gemini-book/gemini-book.routes
 import { GeminiBookService } from './modules/gemini-book/gemini-book.service.js'
 import { PipelineRepository } from './modules/pipeline/pipeline.repository.js'
 import { createPipelineRouter } from './modules/pipeline/pipeline.routes.js'
+import { PipelineStepExecutor } from './modules/pipeline/pipeline-step.executor.js'
 import {
   PipelineService,
 } from './modules/pipeline/pipeline.service.js'
 import { StyleRepository } from './modules/pipeline/style/style.repository.js'
 import { StyleStepExecutor } from './modules/pipeline/style/style-step.executor.js'
+import { CharactersRepository } from './modules/pipeline/characters/characters.repository.js'
+import { CharactersStepExecutor } from './modules/pipeline/characters/characters-step.executor.js'
 import { ProjectController } from './modules/projects/project.controller.js'
 import { ProjectRepository } from './modules/projects/project.repository.js'
 import { createProjectRouter } from './modules/projects/project.routes.js'
@@ -26,6 +29,7 @@ import { UserRepository } from './modules/session/user.repository.js'
 import { HttpError } from './shared/http-error.js'
 import { GoogleGeminiBookAdapter } from './services/gemini/google-gemini-book-adapter.js'
 import { GoogleGeminiStyleAdapter } from './services/gemini/google-gemini-style-adapter.js'
+import { GoogleGeminiCharactersAdapter } from './services/gemini/google-gemini-characters-adapter.js'
 import { FileStorageService } from './storage/file-storage.service.js'
 
 type AppDependencies = {
@@ -48,11 +52,20 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
   const pipelineService = dependencies.pipelineService ?? new PipelineService(
     new PipelineRepository(),
-    new StyleStepExecutor(
-      new StyleRepository(),
-      new GoogleGeminiStyleAdapter(
-        env.GEMINI_API_KEY,
-        env.GEMINI_TEXT_MODEL,
+    new PipelineStepExecutor(
+      new StyleStepExecutor(
+        new StyleRepository(),
+        new GoogleGeminiStyleAdapter(
+          env.GEMINI_API_KEY,
+          env.GEMINI_TEXT_MODEL,
+        ),
+      ),
+      new CharactersStepExecutor(
+        new CharactersRepository(),
+        new GoogleGeminiCharactersAdapter(
+          env.GEMINI_API_KEY,
+          env.GEMINI_TEXT_MODEL,
+        ),
       ),
     ),
     { staleAfterMs: env.PIPELINE_STALE_AFTER_MS },

@@ -37,8 +37,10 @@ Cost control is also enforced through application behavior:
 - limit chapters to 1;
 - generate at most 2 portraits and 1 chapter illustration in the normal flow;
 - never automatically retry Gemini generation;
+- persist generated results as durable checkpoints where appropriate;
 - persist generated images immediately;
-- skip completed images during retry;
+- skip completed generation work during retry when a valid durable result
+  already exists;
 - mock Gemini in automated tests.
 
 ### Trade-off
@@ -46,8 +48,8 @@ Cost control is also enforced through application behavior:
 The implementation prioritizes cost efficiency over using the most expensive
 model available for maximum generation quality.
 
-For this assessment, reliable pipeline behavior and controlled API usage are
-more important than maximizing image quality.
+For this assessment, reliable pipeline behavior, resumability, and controlled
+API usage are more important than maximizing generation quality.
 
 ---
 
@@ -225,34 +227,109 @@ small and makes retry behavior unambiguous.
 
 ---
 
-## Decision 5 — Use local server sessions for passwordless identity
+## Decision 5 — Treat validated STYLE persistence as a durable paid-call checkpoint
 
 ### Context
 
-The assessment needs lightweight name/email identity, authenticated project
-ownership, and sign-out.
+Phase 7 introduced the first real Gemini generation step in the pipeline.
 
-Introducing JWTs, refresh tokens, OAuth, or an external identity provider would
-add security and operational machinery that the local assessment does not need.
+A difficult failure window exists between successfully generating and
+persisting STYLE and successfully completing the pipeline state transition:
+
+```text
+Gemini generation succeeds
+→ STYLE validates
+→ STYLE persistence succeeds
+→ final pipeline completeStep() fails
+```
+
+At this point, the application has already paid for and safely persisted a
+valid generation result, but the pipeline still cannot claim that STYLE
+completed.
+
+A naive retry would call Gemini again and pay for a duplicate result.
+
+A second naive approach would treat every non-null `projects.style` as proof
+that STYLE generation is complete. That is also unsafe because STYLE may be
+user-supplied, stale, or unrelated to the exact retry path.
 
 ### Decision
 
-Use `express-session` with an HTTP-only cookie.
+Treat a validated persisted STYLE as a durable generation checkpoint, but only
+in a narrowly defined retry path.
 
-The server stores only the authenticated user ID in the session; project and
-pipeline services enforce ownership through user-scoped repository queries.
+`PipelineService` derives retry state from the project snapshot that existed
+before the atomic STYLE acquisition and passes that information to the STYLE
+executor.
 
-The default memory session store is acceptable for this local assessment.
+The executor may reuse the persisted STYLE and make zero Gemini calls only
+when:
 
-After a backend restart, users identify again with the same email and recover
-their persisted projects.
+- the current execution is an explicit retry of the failed STYLE step;
+- the persisted STYLE validates against the expected STYLE schema;
+- the pipeline state indicates that STYLE is the retryable step.
+
+The executor does not use a blanket rule such as:
+
+```text
+projects.style != null
+→ skip Gemini
+```
+
+The important recovery flow is:
+
+```text
+Gemini generation
+→ validate STYLE
+→ persist STYLE
+→ final pipeline completion transition fails
+→ operation remains RUNNING
+→ explicit stale recovery
+→ STYLE becomes FAILED
+→ explicit user retry
+→ validate persisted STYLE checkpoint
+→ skip Gemini
+→ retry pipeline completion
+```
+
+Manual STYLE follows the same pipeline acquisition and persistence guarantees
+but makes zero Gemini calls.
+
+### Why I Overrode the AI Suggestion
+
+A simpler retry implementation could repeat the Gemini call after the final
+pipeline transition failed.
+
+That behavior would be functionally recoverable, but it would unnecessarily
+consume paid API quota even though the valid generation result had already
+been persisted.
+
+Conversely, blindly trusting any existing STYLE would weaken pipeline
+correctness.
+
+The final implementation therefore distinguishes between:
+
+```text
+persisted data exists
+```
+
+and:
+
+```text
+persisted data is a valid checkpoint for this explicit retry
+```
 
 ### Trade-off
 
-Sessions are intentionally not durable across backend restarts.
+The retry logic requires slightly more execution context because
+`PipelineService` must derive and pass retry information from the
+pre-acquisition snapshot.
 
-This avoids adding a session database or external infrastructure while keeping
-project data durable and ownership checks server-side.
+In return, the system avoids duplicate paid Gemini calls in an important
+partial-failure case while preserving strict pipeline completion semantics.
+
+This checkpoint pattern can also inform later paid generation steps, but it
+should only be reused where a durable generated result can be safely proven.
 
 ---
 
@@ -269,6 +346,9 @@ Gemini API behavior.
 The Gemini Files API already returns a reusable file URI after upload. Later
 model requests can reference that URI directly, so preparing the book does not
 require inventing a second provider interaction or cache operation.
+
+Phase 7 further validated this decision because STYLE generation can consume
+the persisted file URI directly without uploading or resending the book.
 
 ### Decision
 
@@ -297,6 +377,9 @@ remains nullable and unused.
 
 No provider interaction/cache identifier is created merely to populate an
 existing database field.
+
+Later text-generation steps, beginning with Phase 7 STYLE, reuse
+`geminiBookFileUri` directly.
 
 Uploaded Files API resources are temporary provider resources.
 
@@ -349,13 +432,30 @@ the user.
 
 The document has reached the intended six-decision limit.
 
+Phase 7 produced a stronger assessment-specific engineering decision around
+durable generation checkpoints and paid-call recovery. It therefore replaced
+the previous local-session decision in this document.
+
+The session implementation remains part of the application architecture and
+Git history, but it is no longer one of the six decisions highlighted here.
+
 If a later implementation produces a more meaningful engineering trade-off,
-an existing weaker decision may be replaced rather than continuously adding
+an existing weaker decision should be replaced rather than continuously adding
 new entries.
 
-This keeps the document focused on decisions that materially affected the
-architecture, correctness, AI-assisted workflow, or implementation trade-offs
-rather than turning it into an implementation worklog.
+This keeps the document focused on decisions that materially affected:
+
+- architecture;
+- correctness;
+- concurrency;
+- resumability;
+- Gemini API cost;
+- AI-assisted engineering decisions.
+
+It should not become an implementation worklog.
 
 ---
 
+## If I Had One More Day
+
+*To be completed near the end of the assessment.*

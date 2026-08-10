@@ -53,8 +53,12 @@ export interface PipelineRepository {
 
 export interface PipelineExecutor {
   execute(input: {
+    userId: string
     projectId: string
     step: PipelineStep
+    startedAt: Date
+    isRetry: boolean
+    manualStyle?: unknown
   }): Promise<void>
 }
 
@@ -89,6 +93,7 @@ export class PipelineService {
     userId: string,
     projectId: string,
     step: PipelineStep,
+    input: { manualStyle?: unknown } = {},
   ): Promise<void> {
     const project = await this.requireProject(projectId, userId)
     this.assertCanRun(project, step)
@@ -110,7 +115,14 @@ export class PipelineService {
     }
 
     try {
-      await this.executor.execute({ projectId, step })
+      await this.executor.execute({
+        userId,
+        projectId,
+        step,
+        startedAt,
+        isRetry: project.stepState === STEP_STATES.FAILED,
+        manualStyle: input.manualStyle,
+      })
     } catch {
       let failed = false
       try {

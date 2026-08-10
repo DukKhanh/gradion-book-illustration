@@ -6,6 +6,7 @@ export class PipelineStepExecutor implements PipelineExecutor {
     private readonly style: PipelineExecutor,
     private readonly characters: PipelineExecutor,
     private readonly portraits: PipelineExecutor,
+    private readonly chapters: PipelineExecutor,
   ) {}
 
   async execute(input: Parameters<PipelineExecutor['execute']>[0]): Promise<void> {
@@ -17,6 +18,9 @@ export class PipelineStepExecutor implements PipelineExecutor {
     }
     if (input.step === PIPELINE_STEPS.PORTRAITS) {
       return this.portraits.execute(input)
+    }
+    if (input.step === PIPELINE_STEPS.CHAPTERS) {
+      return this.chapters.execute(input)
     }
     throw new Error('This pipeline step is not implemented.')
   }

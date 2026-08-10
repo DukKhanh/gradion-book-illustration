@@ -59,6 +59,17 @@ export const projects = sqliteTable(
       'gemini_book_file_uri',
     ),
 
+    geminiBookState: text('gemini_book_state')
+      .notNull()
+      .default('IDLE'),
+
+    geminiBookStartedAt: integer(
+      'gemini_book_started_at',
+      { mode: 'timestamp_ms' },
+    ),
+
+    geminiBookError: text('gemini_book_error'),
+
     geminiBookInteractionId: text(
       'gemini_book_interaction_id',
     ),

@@ -32,7 +32,7 @@ Use:
 
 Cost control is also enforced through application behavior:
 
-- reuse the persisted book context;
+- reuse the persisted Gemini book file reference;
 - limit characters to 2;
 - limit chapters to 1;
 - generate at most 2 portraits and 1 chapter illustration in the normal flow;
@@ -79,11 +79,15 @@ Keep:
 
 Replace:
 
-`better-sqlite3`
+```text
+better-sqlite3
+```
 
 with:
 
-`@libsql/client`
+```text
+@libsql/client
+```
 
 The application still uses a local SQLite database file.
 
@@ -133,10 +137,12 @@ monolith organized by feature.
 
 Backend dependency flow:
 
+```text
 Route
 → Controller
 → Service
 → Repository / GeminiService / FileStorageService
+```
 
 Responsibilities remain separated:
 
@@ -165,21 +171,6 @@ In return, it has substantially less boilerplate and is easier to understand,
 implement, and review within the assessment timeframe.
 
 ---
-
-## Future Decisions
-
-Additional decisions will be added only when they genuinely occur during
-implementation.
-
-The final submission will keep approximately 4–6 of the most meaningful
-decisions, including at least three genuine cases where AI output was
-challenged, corrected, or simplified.
-
----
-
-## If I Had One More Day
-
-_To be completed near the end of the assessment._
 
 ## Decision 4 — Preserve the failed step instead of clearing execution state
 
@@ -239,22 +230,132 @@ small and makes retry behavior unambiguous.
 ### Context
 
 The assessment needs lightweight name/email identity, authenticated project
-ownership, and sign-out. Introducing JWTs, refresh tokens, OAuth, or an
-external identity provider would add security and operational machinery that
-the local assessment does not need.
+ownership, and sign-out.
+
+Introducing JWTs, refresh tokens, OAuth, or an external identity provider would
+add security and operational machinery that the local assessment does not need.
 
 ### Decision
 
-Use `express-session` with an HTTP-only cookie. The server stores only the
-authenticated user ID in the session; project and pipeline services enforce
-ownership through user-scoped repository queries.
+Use `express-session` with an HTTP-only cookie.
 
-The default memory session store is acceptable for this local phase. After a
-backend restart, users identify again with the same email and recover their
-persisted projects.
+The server stores only the authenticated user ID in the session; project and
+pipeline services enforce ownership through user-scoped repository queries.
+
+The default memory session store is acceptable for this local assessment.
+
+After a backend restart, users identify again with the same email and recover
+their persisted projects.
 
 ### Trade-off
 
-Sessions are intentionally not durable across backend restarts. This avoids
-adding a session database or external infrastructure while keeping project data
-durable and ownership checks server-side.
+Sessions are intentionally not durable across backend restarts.
+
+This avoids adding a session database or external infrastructure while keeping
+project data durable and ownership checks server-side.
+
+---
+
+## Decision 6 — Persist a Gemini Files API URI, not an invented context object
+
+### Context
+
+The initial schema included an opaque Gemini interaction identifier, which
+could suggest creating a provider interaction or cache while preparing a book.
+
+During Phase 6 design, the proposed integration was reviewed against the actual
+Gemini API behavior.
+
+The Gemini Files API already returns a reusable file URI after upload. Later
+model requests can reference that URI directly, so preparing the book does not
+require inventing a second provider interaction or cache operation.
+
+### Decision
+
+Phase 6 performs one explicit provider operation:
+
+```text
+Local persisted book
+→ Gemini Files API upload
+→ persist returned file URI
+→ READY
+```
+
+The application stores the returned URI in:
+
+```text
+geminiBookFileUri
+```
+
+The existing:
+
+```text
+geminiBookInteractionId
+```
+
+remains nullable and unused.
+
+No provider interaction/cache identifier is created merely to populate an
+existing database field.
+
+Uploaded Files API resources are temporary provider resources.
+
+The local persisted `book.txt` remains the durable source of truth.
+
+If a later generation request discovers that a provider reference has expired,
+the application should require explicit user reinitialization rather than
+silently performing another paid upload.
+
+The book preparation state is persisted as:
+
+```text
+IDLE
+RUNNING
+FAILED
+READY
+```
+
+Initialization is explicitly user-triggered and guarded by an atomic
+conditional database update so concurrent requests cannot both perform the
+Gemini upload.
+
+A project already in `READY` returns without another Gemini call.
+
+### Trade-off
+
+This keeps the Gemini integration small and avoids building a speculative
+interaction or cache lifecycle before it is actually required.
+
+It also means that persisted readiness does not guarantee that the provider
+still retains the referenced file indefinitely.
+
+The application therefore distinguishes between:
+
+```text
+Local book
+= durable application data
+
+Gemini file URI
+= temporary provider reference
+```
+
+This design favors explicit behavior, controlled API cost, and a small
+integration surface over attempting to hide provider-resource expiration from
+the user.
+
+---
+
+## Future Decisions
+
+The document has reached the intended six-decision limit.
+
+If a later implementation produces a more meaningful engineering trade-off,
+an existing weaker decision may be replaced rather than continuously adding
+new entries.
+
+This keeps the document focused on decisions that materially affected the
+architecture, correctness, AI-assisted workflow, or implementation trade-offs
+rather than turning it into an implementation worklog.
+
+---
+

@@ -1,10 +1,21 @@
 # Engineering Decisions
 
-This document records meaningful engineering decisions and trade-offs made
-during the implementation of the Gradion assessment.
+This document records the most meaningful engineering decisions and trade-offs
+made during the implementation of the Gradion assessment.
 
-It is intentionally not a worklog. Git history records implementation
-progress.
+It is intentionally not a worklog. Git history and `docs/prompts/` record
+implementation progress and the detailed AI-assisted workflow.
+
+The final document keeps only a small number of decisions that materially
+affected:
+
+- architecture;
+- correctness;
+- concurrency;
+- resumability;
+- Gemini API cost;
+- implementation simplicity;
+- AI-assisted engineering judgment.
 
 Each decision explains:
 
@@ -15,13 +26,19 @@ Each decision explains:
 
 ---
 
-## Decision 1 — Use cost-oriented Gemini models
+## Decision 1 — Use cost-oriented Gemini models and explicit paid-call control
 
 ### Context
 
 The application requires both text reasoning and image generation through the
-Gemini API. API usage is paid, so model selection and unnecessary generation
-directly affect the cost of completing and testing the assessment.
+Gemini API.
+
+API usage is paid, so model choice matters, but model selection alone is not
+enough to control cost.
+
+Duplicate calls caused by retries, concurrent requests, lost persistence
+transitions, or partial multi-image failures could consume more quota than the
+normal successful pipeline.
 
 ### Decision
 
@@ -30,26 +47,33 @@ Use:
 - `gemini-3.6-flash` for text generation;
 - `gemini-3.1-flash-lite-image` for image generation.
 
+Keep the model names configuration-driven.
+
 Cost control is also enforced through application behavior:
 
-- reuse the persisted Gemini book file reference;
-- limit characters to 2;
-- limit chapters to 1;
-- generate at most 2 portraits and 1 chapter illustration in the normal flow;
+- reuse the persisted Gemini Files API book reference;
+- limit characters to at most two;
+- limit chapters to one;
+- generate at most two portraits in the normal flow;
+- generate only the required chapter illustration;
 - never automatically retry Gemini generation;
-- persist generated results as durable checkpoints where appropriate;
-- persist generated images immediately;
-- skip completed generation work during retry when a valid durable result
-  already exists;
-- mock Gemini in automated tests.
+- atomically acquire pipeline work before any paid call;
+- persist successful paid results as durable checkpoints;
+- skip already durable results during explicit retry;
+- generate multi-image work sequentially rather than eagerly in parallel;
+- use fake Gemini adapters in automated tests;
+- perform real Gemini calls only through explicit user-triggered actions.
 
 ### Trade-off
 
-The implementation prioritizes cost efficiency over using the most expensive
-model available for maximum generation quality.
+The implementation prioritizes controlled API usage and predictable behavior
+over maximum generation quality or maximum generation speed.
 
-For this assessment, reliable pipeline behavior, resumability, and controlled
-API usage are more important than maximizing generation quality.
+Sequential image generation can be slower than parallel generation, and the
+chosen models may not provide the highest possible output quality.
+
+For this assessment, predictable cost, resumability, and correctness are more
+important than optimizing for raw throughput or premium model quality.
 
 ---
 
@@ -60,16 +84,16 @@ API usage are more important than maximizing generation quality.
 ### Context
 
 AI initially suggested using `better-sqlite3` with Drizzle because it provides
-a simple SQLite integration for a small local application.
+a straightforward SQLite integration for a small local application.
 
 During project setup on Windows, installing `better-sqlite3` required native
 compilation through `node-gyp`.
 
-The installation failed because the environment did not contain the Visual
-Studio C++ build workload.
+The installation failed because the development environment did not contain
+the required Visual Studio C++ build workload.
 
-Node's built-in `node:sqlite` was also investigated, but using it cleanly with
-the selected stable Drizzle setup would have required changing the dependency
+Node's built-in `node:sqlite` was also investigated, but adopting it cleanly
+with the selected Drizzle setup would have required changing the dependency
 strategy.
 
 ### Decision
@@ -95,21 +119,26 @@ The application still uses a local SQLite database file.
 
 ### Why I Overrode the AI Suggestion
 
-Installing a large native C++ build toolchain only to support the database
-driver would make the assessment unnecessarily difficult to set up on Windows.
+Installing a large native C++ build toolchain only to support the local
+database driver would make the assessment unnecessarily difficult to set up,
+especially on Windows.
 
-The database requirement itself did not justify that additional environment
-dependency.
+The database requirement did not justify adding that environment dependency.
+
+Changing the driver solved the actual setup problem without changing the
+application's persistence architecture.
 
 ### Trade-off
 
-The project gains another JavaScript dependency, but setup becomes simpler and
-more portable while preserving the intended SQLite + Drizzle persistence
-model.
+The project gains another JavaScript dependency and uses a different SQLite
+driver than originally proposed.
+
+In return, setup is simpler and more portable while preserving SQLite +
+Drizzle and the existing repository design.
 
 ---
 
-## Decision 3 — Use reduced Clean Architecture
+## Decision 3 — Use reduced Clean Architecture instead of a full layered implementation
 
 **AI override #2**
 
@@ -130,51 +159,74 @@ A full implementation could introduce layers and abstractions such as:
 - mappers.
 
 For a time-bounded assessment with a relatively small domain, this would add
-substantial boilerplate.
+substantial boilerplate and make the implementation harder to review.
 
 ### Decision
 
-Keep the useful Clean Architecture boundaries but implement them as a modular
-monolith organized by feature.
+Keep the useful architectural boundaries but implement them as a modular
+monolith organized primarily by feature.
 
 Backend dependency flow:
 
 ```text
 Route
 → Controller
-→ Service
-→ Repository / GeminiService / FileStorageService
+→ Service / Pipeline orchestration
+→ Repository / Gemini adapter / FileStorageService
 ```
 
 Responsibilities remain separated:
 
 - Controller: HTTP concerns.
 - Service: business rules and orchestration.
-- Repository: persistence.
-- GeminiService: Gemini API integration.
-- FileStorageService: filesystem persistence.
+- Repository: persistence and conditional state transitions.
+- Gemini adapter: provider-specific API behavior.
+- FileStorageService: local durable filesystem persistence.
+- Pipeline executor: step-specific generation behavior.
 
 Additional abstractions are introduced only when a concrete requirement needs
 them.
 
+For example, Gemini integration uses small task-specific contracts such as:
+
+```text
+GeminiStyleAdapter
+GeminiCharactersAdapter
+GeminiPortraitAdapter
+```
+
+rather than a generic provider framework.
+
 ### Why I Overrode the AI Suggestion
 
-The full architecture was more complex than necessary for the assessment.
+A complete ports-and-adapters architecture was more complex than the
+assessment required.
 
-The reduced structure preserves separation of concerns and testability without
-building infrastructure for hypothetical future requirements.
+The important requirement was not the number of architectural layers. It was
+maintaining clear boundaries so that:
+
+- business behavior can be tested;
+- Gemini can be mocked;
+- persistence logic can be verified independently;
+- HTTP concerns do not leak into generation logic.
+
+The reduced structure provides those benefits without speculative
+infrastructure.
 
 ### Trade-off
 
-The implementation has less theoretical isolation than a complete
-ports-and-adapters architecture.
+The implementation has less theoretical isolation than a complete Clean
+Architecture implementation.
 
-In return, it has substantially less boilerplate and is easier to understand,
-implement, and review within the assessment timeframe.
+Some composition is performed directly in the application bootstrap rather
+than through factories or a dependency-injection framework.
+
+In return, the project has substantially less boilerplate and remains easier
+to understand, implement, test, and review within the assessment timeframe.
 
 ---
 
-## Decision 4 — Preserve the failed step instead of clearing execution state
+## Decision 4 — Preserve the failed pipeline step instead of clearing its identity
 
 **AI override #3**
 
@@ -183,9 +235,11 @@ implement, and review within the assessment timeframe.
 During the Phase 4 pipeline design, Codex initially proposed clearing the
 running execution fields after both successful and failed execution.
 
-The existing persistence model does not have a separate `failedStep` field.
-Clearing `runningStep` after failure would therefore lose the identity of the
-step that must be retried.
+The existing project persistence model does not contain a separate
+`failedStep` column.
+
+If `runningStep` were cleared after failure, the system would lose the
+identity of the exact step that should be explicitly retried.
 
 ### Decision
 
@@ -205,163 +259,272 @@ On failed execution:
 - clear `stepStartedAt`;
 - persist a safe error message.
 
-Explicit stale recovery follows the same rule: stale `RUNNING` work becomes
-`FAILED` while preserving the step identity.
+Explicit stale recovery follows the same rule:
+
+```text
+RUNNING
+→ explicit stale recovery
+→ FAILED
+```
+
+while preserving the retryable step in `runningStep`.
+
+Retry is permitted only when the requested step matches the preserved failed
+step and its expected predecessor remains complete.
 
 ### Why I Overrode the AI Suggestion
 
-Clearing `runningStep` on failure discarded information required to retry the
-exact failed step.
+Clearing `runningStep` on failure discarded information required by the retry
+semantics.
 
-Adding another `failedStep` column would solve that problem but would introduce
-an additional state field and migration that are unnecessary for the current
-sequential pipeline.
+Adding a separate `failedStep` column would also solve the problem, but it
+would introduce another state field and migration for information the current
+sequential pipeline can represent without it.
 
 ### Trade-off
 
-`runningStep` now represents the current active or retryable step rather than
-strictly a step that is executing at this exact moment.
+`runningStep` now means:
 
-This slightly broadens the field's semantics, but keeps the persistence model
-small and makes retry behavior unambiguous.
+```text
+currently active step
+or
+currently retryable failed step
+```
+
+rather than strictly "a step executing at this exact moment."
+
+That slightly broadens the field's semantics.
+
+In return, the persistence model remains small and failed-step retry behavior
+is unambiguous without introducing another project state field.
 
 ---
 
-## Decision 5 — Treat validated STYLE persistence as a durable paid-call checkpoint
+## Decision 5 — Checkpoint paid Gemini results at the smallest durable useful boundary
 
 ### Context
 
-Phase 7 introduced the first real Gemini generation step in the pipeline.
+Once real Gemini generation was introduced, the pipeline gained several
+failure windows where a provider call could succeed but a later local
+operation could fail.
 
-A difficult failure window exists between successfully generating and
-persisting STYLE and successfully completing the pipeline state transition:
+Examples include:
 
 ```text
-Gemini generation succeeds
-→ STYLE validates
-→ STYLE persistence succeeds
-→ final pipeline completeStep() fails
+Gemini STYLE succeeds
+→ STYLE persists
+→ final pipeline completion fails
 ```
 
-At this point, the application has already paid for and safely persisted a
-valid generation result, but the pipeline still cannot claim that STYLE
-completed.
-
-A naive retry would call Gemini again and pay for a duplicate result.
-
-A second naive approach would treat every non-null `projects.style` as proof
-that STYLE generation is complete. That is also unsafe because STYLE may be
-user-supplied, stale, or unrelated to the exact retry path.
-
-### Decision
-
-Treat a validated persisted STYLE as a durable generation checkpoint, but only
-in a narrowly defined retry path.
-
-`PipelineService` derives retry state from the project snapshot that existed
-before the atomic STYLE acquisition and passes that information to the STYLE
-executor.
-
-The executor may reuse the persisted STYLE and make zero Gemini calls only
-when:
-
-- the current execution is an explicit retry of the failed STYLE step;
-- the persisted STYLE validates against the expected STYLE schema;
-- the pipeline state indicates that STYLE is the retryable step.
-
-The executor does not use a blanket rule such as:
-
 ```text
-projects.style != null
-→ skip Gemini
-```
-
-The important recovery flow is:
-
-```text
-Gemini generation
-→ validate STYLE
-→ persist STYLE
-→ final pipeline completion transition fails
-→ operation remains RUNNING
-→ explicit stale recovery
-→ STYLE becomes FAILED
-→ explicit user retry
-→ validate persisted STYLE checkpoint
-→ skip Gemini
-→ retry pipeline completion
-```
-
-Manual STYLE follows the same pipeline acquisition and persistence guarantees
-but makes zero Gemini calls.
-
-### Why I Overrode the AI Suggestion
-
-A simpler retry implementation could repeat the Gemini call after the final
-pipeline transition failed.
-
-That behavior would be functionally recoverable, but it would unnecessarily
-consume paid API quota even though the valid generation result had already
-been persisted.
-
-Conversely, blindly trusting any existing STYLE would weaken pipeline
-correctness.
-
-The final implementation therefore distinguishes between:
-
-```text
-persisted data exists
+Gemini CHARACTERS succeeds
+→ complete character set persists
+→ final pipeline completion fails
 ```
 
 and:
 
 ```text
-persisted data is a valid checkpoint for this explicit retry
+portrait 0 succeeds and persists
+→ portrait 1 fails
+```
+
+A naive retry strategy would rerun the entire step and repeat already successful
+paid Gemini calls.
+
+At the same time, blindly treating any existing database data as completed work
+would weaken correctness because persisted data may be:
+
+- partial;
+- stale;
+- inconsistent;
+- unrelated to the current retry path;
+- missing its durable filesystem artifact.
+
+### Decision
+
+Persist each paid generation result at the smallest boundary that represents a
+complete durable unit for that type of output.
+
+Different pipeline steps therefore use different checkpoint granularity.
+
+### STYLE
+
+STYLE is one logical text-generation result.
+
+```text
+Gemini
+→ validate STYLE
+→ persist STYLE
+→ complete pipeline step
+```
+
+If the final pipeline completion transition is lost, a qualified failed-STYLE
+retry may validate and reuse the persisted STYLE with zero additional Gemini
+calls.
+
+A non-null STYLE alone is not sufficient.
+
+Checkpoint reuse requires the appropriate pre-acquisition retry context and a
+valid persisted result.
+
+### CHARACTERS
+
+The generated character list is one logical structured result.
+
+```text
+Gemini
+→ validate complete 1–2 character set
+→ transactionally replace entire set
+→ complete pipeline step
+```
+
+Individual characters are not checkpointed independently during CHARACTERS
+generation.
+
+The complete validated set is persisted atomically.
+
+If persistence succeeds but final pipeline completion is lost, a qualified
+CHARACTERS retry can validate the persisted complete set and make zero
+additional Gemini calls.
+
+Partial or incorrectly positioned rows are not accepted as checkpoints.
+
+### PORTRAITS
+
+Portraits are different because each character requires an independent paid
+image-generation call.
+
+Therefore each portrait is checkpointed immediately:
+
+```text
+generate portrait
+→ write image file
+→ conditional database DONE checkpoint
+→ move to next character
+```
+
+A durable portrait requires:
+
+```text
+generationStatus = DONE
+imagePath is non-null
+referenced image file exists
+```
+
+On retry:
+
+```text
+durable portrait
+→ skip
+→ zero Gemini calls
+
+incomplete portrait
+→ generate
+```
+
+This permits partial progress:
+
+```text
+portrait 0 DONE
+portrait 1 FAILED
+```
+
+to resume without regenerating portrait 0.
+
+### Stale execution protection
+
+A result may be checkpointed only while the request still owns the exact
+project-level pipeline acquisition.
+
+Paid-result persistence is conditionally guarded by values such as:
+
+```text
+projectId
+userId
+runningStep
+stepState = RUNNING
+exact stepStartedAt
+```
+
+and the relevant item ID where needed.
+
+An old Gemini response returning after stale recovery therefore cannot become a
+new durable checkpoint.
+
+### Why I Challenged the Simpler Retry Strategy
+
+The simplest implementation would rerun a failed step from the beginning.
+
+That is easy to implement but unnecessarily expensive once a step contains
+paid provider operations.
+
+The opposite shortcut — "if some persisted output exists, skip Gemini" — is
+also unsafe.
+
+The final design distinguishes between:
+
+```text
+data exists
+```
+
+and:
+
+```text
+a validated durable checkpoint exists for this retry
 ```
 
 ### Trade-off
 
-The retry logic requires slightly more execution context because
-`PipelineService` must derive and pass retry information from the
-pre-acquisition snapshot.
+Checkpoint qualification makes retry logic more explicit and requires
+additional validation against both database state and, for images, filesystem
+state.
 
-In return, the system avoids duplicate paid Gemini calls in an important
-partial-failure case while preserving strict pipeline completion semantics.
+Multi-image generation also runs sequentially rather than in parallel.
 
-This checkpoint pattern can also inform later paid generation steps, but it
-should only be reused where a durable generated result can be safely proven.
+In return:
+
+- already paid work is not unnecessarily repeated;
+- partial success survives later failure;
+- retries remain explicit;
+- stale responses cannot silently overwrite newer work;
+- automated tests can verify exactly when a paid call is allowed.
+
+This pattern is intentionally applied at different granularity depending on
+the generated artifact instead of forcing every pipeline step into one generic
+checkpoint abstraction.
 
 ---
 
-## Decision 6 — Persist a Gemini Files API URI, not an invented context object
+## Decision 6 — Persist a Gemini Files API URI instead of inventing a context object
 
 ### Context
 
-The initial schema included an opaque Gemini interaction identifier, which
-could suggest creating a provider interaction or cache while preparing a book.
+The initial persistence model included an opaque Gemini interaction identifier,
+which could suggest creating a provider interaction, cache, or separate context
+object while preparing the book.
 
-During Phase 6 design, the proposed integration was reviewed against the actual
-Gemini API behavior.
+During Phase 6 design, that assumption was challenged against the actual Gemini
+API behavior.
 
-The Gemini Files API already returns a reusable file URI after upload. Later
-model requests can reference that URI directly, so preparing the book does not
-require inventing a second provider interaction or cache operation.
+The Gemini Files API already returns a reusable file URI after upload.
 
-Phase 7 further validated this decision because STYLE generation can consume
-the persisted file URI directly without uploading or resending the book.
+Later model requests can reference that URI directly, so preparing the book
+does not require creating a second provider resource solely to represent
+"context."
 
 ### Decision
 
-Phase 6 performs one explicit provider operation:
+Prepare the remote book reference through one explicit provider operation:
 
 ```text
-Local persisted book
+Local persisted book.txt
 → Gemini Files API upload
-→ persist returned file URI
+→ persist returned geminiBookFileUri
 → READY
 ```
 
-The application stores the returned URI in:
+The application stores:
 
 ```text
 geminiBookFileUri
@@ -375,21 +538,49 @@ geminiBookInteractionId
 
 remains nullable and unused.
 
-No provider interaction/cache identifier is created merely to populate an
-existing database field.
+No provider interaction/cache object is created merely because an existing
+database field could hold one.
 
-Later text-generation steps, beginning with Phase 7 STYLE, reuse
-`geminiBookFileUri` directly.
+Later text-generation steps reuse the persisted Files API URI directly where
+the book itself is required.
 
-Uploaded Files API resources are temporary provider resources.
+For example:
 
-The local persisted `book.txt` remains the durable source of truth.
+```text
+STYLE
+CHARACTERS
+```
 
-If a later generation request discovers that a provider reference has expired,
-the application should require explicit user reinitialization rather than
-silently performing another paid upload.
+can use the reusable book reference.
 
-The book preparation state is persisted as:
+PORTRAITS does not require the book URI because its image prompt derives from
+the already persisted STYLE and character portrait prompt.
+
+### Remote-reference lifetime
+
+The Gemini file URI is a provider-managed temporary resource.
+
+It is not application storage.
+
+The application therefore distinguishes:
+
+```text
+Local book.txt
+= durable application source of truth
+
+Gemini file URI
+= reusable temporary provider reference
+```
+
+The application does not silently refresh or re-upload a remote reference
+during unrelated generation work.
+
+If a later request determines that the provider reference can no longer be
+used, reinitialization must be an explicit user action.
+
+### Concurrency
+
+Book initialization itself is guarded by persisted execution state:
 
 ```text
 IDLE
@@ -398,64 +589,55 @@ FAILED
 READY
 ```
 
-Initialization is explicitly user-triggered and guarded by an atomic
-conditional database update so concurrent requests cannot both perform the
+and an atomic conditional SQLite acquisition.
+
+Only the caller that successfully acquires initialization may perform the
 Gemini upload.
 
-A project already in `READY` returns without another Gemini call.
+A project already in `READY` performs zero additional upload calls through the
+normal initialization action.
 
 ### Trade-off
 
 This keeps the Gemini integration small and avoids building a speculative
-interaction or cache lifecycle before it is actually required.
+provider interaction/cache lifecycle before it is required.
 
-It also means that persisted readiness does not guarantee that the provider
-still retains the referenced file indefinitely.
-
-The application therefore distinguishes between:
+It also means that:
 
 ```text
-Local book
-= durable application data
-
-Gemini file URI
-= temporary provider reference
+READY
 ```
 
-This design favors explicit behavior, controlled API cost, and a small
-integration surface over attempting to hide provider-resource expiration from
-the user.
+means the application successfully prepared and persisted the remote reference,
+not that the provider guarantees that resource will exist forever.
+
+The local book therefore remains necessary even after successful Gemini
+initialization.
 
 ---
 
-## Future Decisions
+## Final decision set
 
-The document has reached the intended six-decision limit.
+The document intentionally stays limited to six highlighted decisions.
 
-Phase 7 produced a stronger assessment-specific engineering decision around
-durable generation checkpoints and paid-call recovery. It therefore replaced
-the previous local-session decision in this document.
+The current final candidates are:
 
-The session implementation remains part of the application architecture and
-Git history, but it is no longer one of the six decisions highlighted here.
+```text
+1. Cost-oriented Gemini models and paid-call control
+2. Portable SQLite driver choice
+3. Reduced Clean Architecture
+4. Failed-step preservation and retry semantics
+5. Durable paid-result checkpoint strategy
+6. Gemini Files API URI instead of speculative context infrastructure
+```
 
-If a later implementation produces a more meaningful engineering trade-off,
-an existing weaker decision should be replaced rather than continuously adding
-new entries.
+Later implementation phases should not automatically create additional
+decisions.
 
-This keeps the document focused on decisions that materially affected:
+If a future phase introduces a substantially stronger trade-off, it may replace
+one of these entries during the final submission review.
 
-- architecture;
-- correctness;
-- concurrency;
-- resumability;
-- Gemini API cost;
-- AI-assisted engineering decisions.
-
-It should not become an implementation worklog.
+The goal is to document engineering judgment, not to create one decision per
+implementation phase.
 
 ---
-
-## If I Had One More Day
-
-*To be completed near the end of the assessment.*

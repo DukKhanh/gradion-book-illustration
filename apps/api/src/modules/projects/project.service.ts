@@ -29,7 +29,7 @@ export type ProjectCharacterDto = {
   id: string
   name: string
   prompt: string
-  imagePath: string | null
+  portraitUrl: string | null
   generationStatus: string
   generationError: string | null
   position: number
@@ -99,7 +99,7 @@ export class ProjectService {
       characters: (await this.projects.listCharactersForProjectForUser(
         projectId,
         userId,
-      )).map(toProjectCharacterDto),
+      )).map((character) => toProjectCharacterDto(projectId, character)),
     }
   }
 
@@ -148,13 +148,16 @@ export class ProjectService {
 }
 
 function toProjectCharacterDto(
+  projectId: string,
   character: ProjectCharacterRecord,
 ): ProjectCharacterDto {
   return {
     id: character.id,
     name: character.name,
     prompt: character.prompt,
-    imagePath: character.imagePath,
+    portraitUrl: character.generationStatus === 'DONE' && character.imagePath
+      ? `/api/projects/${projectId}/characters/${character.id}/portrait`
+      : null,
     generationStatus: character.generationStatus,
     generationError: character.generationError,
     position: character.position,

@@ -19,7 +19,7 @@ Verified:
 - migration
 - health endpoint
 
-## Current
+## Completed
 
 ### Phase 2 — Architecture and AI Context
 
@@ -29,19 +29,18 @@ Verified:
 - DECISIONS.md
 - TESTING.md
 
-## Next
-
 ### Phase 3 — Persistence Model
 
-Implement:
 - users
 - projects
 - characters
 - chapters
 
+## Current
+
 ### Phase 4 — Pipeline Engine
 
-Implement and test:
+Implement:
 - ordering
 - atomic execution guard
 - retry

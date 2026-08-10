@@ -31,10 +31,22 @@ export class PipelineController {
     next: NextFunction,
   ): Promise<void> => {
     try {
+      const step = parseStep(req.params.step)
+      const hasStyle = Object.prototype.hasOwnProperty.call(
+        req.body ?? {},
+        'style',
+      )
+      if (hasStyle && step !== PIPELINE_STEPS.STYLE) {
+        throw new PipelineError(
+          'A style may only be supplied for the STYLE step.',
+          400,
+        )
+      }
       await this.service.run(
         req.session.userId!,
         singleParam(req.params.projectId),
-        parseStep(req.params.step),
+        step,
+        { manualStyle: hasStyle ? req.body.style : undefined },
       )
       res.status(200).json({ status: 'completed' })
     } catch (error) {

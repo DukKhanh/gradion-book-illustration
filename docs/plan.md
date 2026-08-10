@@ -51,23 +51,28 @@ Verified:
 - pasted text and `.txt` uploads
 - local book persistence
 
+### Phase 6 — Gemini Book Context
+
+- explicit Gemini Files API initialization
+- persisted reusable Gemini book file URI
+- atomic acquisition, failure, retry, and stale recovery
+- local `book.txt` retained as durable source of truth
+
 ## Current
 
-### Phase 6 — Gemini
+### Phase 7 — STYLE Generation
 
 Implement:
-- persistent Gemini book reference
 - STYLE
-- CHARACTERS
-- PORTRAITS
-- CHAPTERS
-- ILLUSTRATIONS
+- optional user-supplied art direction
+- structured Gemini STYLE generation using the persisted book URI
+- validated, durable STYLE checkpoint and pipeline completion recovery
 
 Models:
 - gemini-3.6-flash
 - gemini-3.1-flash-lite-image
 
-### Phase 7 — Frontend
+### Phase 8 — Frontend
 
 Implement:
 - Identity
@@ -77,7 +82,7 @@ Implement:
 - pipeline state UI
 - retry/recovery
 
-### Phase 8 — Final Testing and Documentation
+### Phase 9 — Final Testing and Documentation
 
 - backend tests
 - frontend tests

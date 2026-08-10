@@ -2,6 +2,7 @@ import {
   mkdtemp,
   readFile,
   rm,
+  writeFile,
 } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -33,6 +34,9 @@ import { SessionController } from '../session/session.controller.js'
 import { UserRepository } from '../session/user.repository.js'
 import { SessionService } from '../session/session.service.js'
 import { FileStorageService } from '../../storage/file-storage.service.js'
+import { IllustrationController } from '../pipeline/illustrations/illustration.controller.js'
+import { IllustrationService } from '../pipeline/illustrations/illustration.service.js'
+import { IllustrationsRepository } from '../pipeline/illustrations/illustrations.repository.js'
 
 describe('identity and projects HTTP API', () => {
   let client: ReturnType<typeof createClient>
@@ -107,9 +111,10 @@ describe('identity and projects HTTP API', () => {
     `)
 
     const sessionService = new SessionService(new UserRepository(database))
+    const fileStorage = new FileStorageService(storageDirectory, storageDirectory)
     const projectService = new ProjectService(
       new ProjectRepository(database),
-      new FileStorageService(storageDirectory),
+      fileStorage,
     )
     const pipelineService = new PipelineService(
       new PipelineRepository(database),
@@ -133,6 +138,9 @@ describe('identity and projects HTTP API', () => {
       projectController: new ProjectController(projectService),
       pipelineService,
       geminiBookController: new GeminiBookController(geminiBookService),
+      illustrationController: new IllustrationController(
+        new IllustrationService(new IllustrationsRepository(database), fileStorage),
+      ),
     })
     userA = request.agent(app)
     userB = request.agent(app)
@@ -281,9 +289,31 @@ describe('identity and projects HTTP API', () => {
     expect(chapter).toEqual({
       id: 'chapter-1', name: 'Opening Scene', prompt: 'An opening scene.',
       generationStatus: 'PENDING', generationError: null, position: 0,
+      illustrationUrl: null,
     })
     expect(chapter).not.toHaveProperty('imagePath')
     expect(chapter).not.toHaveProperty('characterIdsJson')
+  })
+
+  it('serves only an owned durable chapter illustration', async () => {
+    await signIn(userA, 'a@example.com')
+    const created = await userA.post('/api/projects').send({ title: 'Illustrated', bookText: 'A book.' })
+    const projectId = created.body.project.id as string
+    const imagePath = join(storageDirectory, 'illustration.png')
+    await writeFile(imagePath, new Uint8Array([137, 80, 78, 71]))
+    await client.execute({
+      sql: `insert into chapters (
+        id, project_id, name, prompt, character_ids_json, image_path,
+        generation_status, generation_error, position, created_at, updated_at
+      ) values ('chapter-image', ?, 'Opening', 'Prompt', '[]', ?, 'DONE', null, 0, 1, 1)`,
+      args: [projectId, imagePath],
+    })
+    expect((await userA.get(`/api/projects/${projectId}`)).body.project.chapters[0].illustrationUrl)
+      .toBe(`/api/projects/${projectId}/chapters/chapter-image/illustration`)
+    await userA.get(`/api/projects/${projectId}/chapters/chapter-image/illustration`)
+      .expect('Content-Type', /image\/png/).expect(200)
+    await signIn(userB, 'b@example.com')
+    await userB.get(`/api/projects/${projectId}/chapters/chapter-image/illustration`).expect(404)
   })
 
   it('requires a session and prevents other users from mutating pipeline state', async () => {

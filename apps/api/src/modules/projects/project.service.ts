@@ -47,6 +47,7 @@ export type ProjectChapterDto = {
   generationStatus: string
   generationError: string | null
   position: number
+  illustrationUrl: string | null
 }
 
 export class ProjectService {
@@ -113,7 +114,7 @@ export class ProjectService {
       chapters: (await this.projects.listChaptersForProjectForUser(
         projectId,
         userId,
-      )).map(toProjectChapterDto),
+      )).map((chapter) => toProjectChapterDto(projectId, chapter)),
     }
   }
 
@@ -161,14 +162,17 @@ export class ProjectService {
   }
 }
 
-function toProjectChapterDto(character: ProjectChapterRecord): ProjectChapterDto {
+function toProjectChapterDto(projectId: string, chapter: ProjectChapterRecord): ProjectChapterDto {
   return {
-    id: character.id,
-    name: character.name,
-    prompt: character.prompt,
-    generationStatus: character.generationStatus,
-    generationError: character.generationError,
-    position: character.position,
+    id: chapter.id,
+    name: chapter.name,
+    prompt: chapter.prompt,
+    generationStatus: chapter.generationStatus,
+    generationError: chapter.generationError,
+    position: chapter.position,
+    illustrationUrl: chapter.generationStatus === 'DONE' && chapter.imagePath
+      ? `/api/projects/${projectId}/chapters/${chapter.id}/illustration`
+      : null,
   }
 }
 

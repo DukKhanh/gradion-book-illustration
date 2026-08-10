@@ -24,6 +24,7 @@ describe('PipelineRepository', () => {
     await client.execute(`
       create table projects (
         id text primary key not null,
+        user_id text not null,
         completed_step text,
         running_step text,
         step_state text not null,
@@ -35,9 +36,9 @@ describe('PipelineRepository', () => {
     await client.execute({
       sql: `
         insert into projects (
-          id, completed_step, running_step, step_state,
+          id, user_id, completed_step, running_step, step_state,
           step_started_at, step_error, updated_at
-        ) values (?, null, null, 'IDLE', null, null, ?)
+        ) values (?, 'user-1', null, null, 'IDLE', null, null, ?)
       `,
       args: [projectId, startedAt.getTime()],
     })
@@ -48,18 +49,20 @@ describe('PipelineRepository', () => {
   })
 
   it('allows exactly one concurrent acquisition from one snapshot', async () => {
-    const snapshot = await repository.findById(projectId)
+    const snapshot = await repository.findByIdForUser(projectId, 'user-1')
     expect(snapshot).not.toBeNull()
 
     const results = await Promise.all([
       repository.acquireStep({
         projectId,
+        userId: 'user-1',
         step: PIPELINE_STEPS.STYLE,
         expected: snapshot!,
         startedAt,
       }),
       repository.acquireStep({
         projectId,
+        userId: 'user-1',
         step: PIPELINE_STEPS.STYLE,
         expected: snapshot!,
         startedAt,
@@ -67,10 +70,24 @@ describe('PipelineRepository', () => {
     ])
 
     expect(results.filter(Boolean)).toHaveLength(1)
-    expect(await repository.findById(projectId)).toMatchObject({
+    expect(await repository.findByIdForUser(projectId, 'user-1')).toMatchObject({
       runningStep: PIPELINE_STEPS.STYLE,
       stepState: STEP_STATES.RUNNING,
       stepStartedAt: startedAt,
     })
+  })
+
+  it('does not acquire a project for a different user', async () => {
+    const snapshot = await repository.findByIdForUser(projectId, 'user-1')
+
+    await expect(
+      repository.acquireStep({
+        projectId,
+        userId: 'user-2',
+        step: PIPELINE_STEPS.STYLE,
+        expected: snapshot!,
+        startedAt,
+      }),
+    ).resolves.toBe(false)
   })
 })

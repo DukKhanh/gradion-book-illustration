@@ -36,17 +36,15 @@ Verified:
 - characters
 - chapters
 
-## Current
-
 ### Phase 4 — Pipeline Engine
 
-Implement:
 - ordering
 - atomic execution guard
 - retry
 - stale recovery
-- 2-character limit
-- 1-chapter limit
+- ownership-scoped pipeline mutations
+
+## Current
 
 ### Phase 5 — Identity and Projects
 

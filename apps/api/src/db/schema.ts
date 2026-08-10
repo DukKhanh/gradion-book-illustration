@@ -199,5 +199,9 @@ export const chapters = sqliteTable(
       table.projectId,
       table.position,
     ),
+    check(
+      'chapters_position_zero',
+      sql`${table.position} = 0`,
+    ),
   ],
 )

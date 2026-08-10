@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { HttpError } from '../../shared/http-error.js'
 import { FileStorageService } from '../../storage/file-storage.service.js'
-import type { ProjectCharacterRecord, ProjectRecord } from './project.repository.js'
+import type { ProjectChapterRecord, ProjectCharacterRecord, ProjectRecord } from './project.repository.js'
 import { ProjectRepository } from './project.repository.js'
 
 const titleSchema = z.string().trim().min(1).max(200)
@@ -37,6 +37,16 @@ export type ProjectCharacterDto = {
 
 export type ProjectDetailDto = ProjectDto & {
   characters: ProjectCharacterDto[]
+  chapters: ProjectChapterDto[]
+}
+
+export type ProjectChapterDto = {
+  id: string
+  name: string
+  prompt: string
+  generationStatus: string
+  generationError: string | null
+  position: number
 }
 
 export class ProjectService {
@@ -100,6 +110,10 @@ export class ProjectService {
         projectId,
         userId,
       )).map((character) => toProjectCharacterDto(projectId, character)),
+      chapters: (await this.projects.listChaptersForProjectForUser(
+        projectId,
+        userId,
+      )).map(toProjectChapterDto),
     }
   }
 
@@ -144,6 +158,17 @@ export class ProjectService {
       throw new HttpError('Book text cannot be empty.', 400)
     }
     return content
+  }
+}
+
+function toProjectChapterDto(character: ProjectChapterRecord): ProjectChapterDto {
+  return {
+    id: character.id,
+    name: character.name,
+    prompt: character.prompt,
+    generationStatus: character.generationStatus,
+    generationError: character.generationError,
+    position: character.position,
   }
 }
 

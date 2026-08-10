@@ -16,6 +16,8 @@ import { PortraitService } from './modules/pipeline/portraits/portrait.service.j
 import { PortraitsRepository } from './modules/pipeline/portraits/portraits.repository.js'
 import { createPortraitRouter } from './modules/pipeline/portraits/portrait.routes.js'
 import { PortraitsStepExecutor } from './modules/pipeline/portraits/portraits-step.executor.js'
+import { ChaptersRepository } from './modules/pipeline/chapters/chapters.repository.js'
+import { ChaptersStepExecutor } from './modules/pipeline/chapters/chapters-step.executor.js'
 import {
   PipelineService,
 } from './modules/pipeline/pipeline.service.js'
@@ -36,6 +38,7 @@ import { GoogleGeminiBookAdapter } from './services/gemini/google-gemini-book-ad
 import { GoogleGeminiStyleAdapter } from './services/gemini/google-gemini-style-adapter.js'
 import { GoogleGeminiCharactersAdapter } from './services/gemini/google-gemini-characters-adapter.js'
 import { GoogleGeminiPortraitAdapter } from './services/gemini/google-gemini-portrait-adapter.js'
+import { GoogleGeminiChapterAdapter } from './services/gemini/google-gemini-chapter-adapter.js'
 import { FileStorageService } from './storage/file-storage.service.js'
 
 type AppDependencies = {
@@ -78,6 +81,13 @@ export function createApp(dependencies: AppDependencies = {}) {
         new PortraitsRepository(),
         new GoogleGeminiPortraitAdapter(env.GEMINI_API_KEY, env.GEMINI_IMAGE_MODEL),
         new FileStorageService(),
+      ),
+      new ChaptersStepExecutor(
+        new ChaptersRepository(),
+        new GoogleGeminiChapterAdapter(
+          env.GEMINI_API_KEY,
+          env.GEMINI_TEXT_MODEL,
+        ),
       ),
     ),
     { staleAfterMs: env.PIPELINE_STALE_AFTER_MS },

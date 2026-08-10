@@ -6,10 +6,11 @@ import {
 } from 'drizzle-orm'
 
 import { db } from '../../db/client.js'
-import { characters, projects } from '../../db/schema.js'
+import { characters, chapters, projects } from '../../db/schema.js'
 
 export type ProjectRecord = typeof projects.$inferSelect
 export type ProjectCharacterRecord = typeof characters.$inferSelect
+export type ProjectChapterRecord = typeof chapters.$inferSelect
 
 export class ProjectRepository {
   constructor(private readonly database: typeof db = db) {}
@@ -71,5 +72,30 @@ export class ProjectRepository {
       eq(projects.id, projectId),
       eq(projects.userId, userId),
     )).orderBy(asc(characters.position))
+  }
+
+  async listChaptersForProjectForUser(
+    projectId: string,
+    userId: string,
+  ): Promise<ProjectChapterRecord[]> {
+    return this.database.select({
+      id: chapters.id,
+      projectId: chapters.projectId,
+      name: chapters.name,
+      prompt: chapters.prompt,
+      characterIdsJson: chapters.characterIdsJson,
+      imagePath: chapters.imagePath,
+      generationStatus: chapters.generationStatus,
+      generationError: chapters.generationError,
+      position: chapters.position,
+      createdAt: chapters.createdAt,
+      updatedAt: chapters.updatedAt,
+    }).from(chapters).innerJoin(
+      projects,
+      eq(chapters.projectId, projects.id),
+    ).where(and(
+      eq(projects.id, projectId),
+      eq(projects.userId, userId),
+    )).orderBy(asc(chapters.position))
   }
 }

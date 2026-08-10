@@ -90,6 +90,21 @@ describe('identity and projects HTTP API', () => {
         updated_at integer not null
       )
     `)
+    await client.execute(`
+      create table chapters (
+        id text primary key not null,
+        project_id text not null,
+        name text not null,
+        prompt text not null,
+        character_ids_json text,
+        image_path text,
+        generation_status text not null default 'PENDING',
+        generation_error text,
+        position integer not null,
+        created_at integer not null,
+        updated_at integer not null
+      )
+    `)
 
     const sessionService = new SessionService(new UserRepository(database))
     const projectService = new ProjectService(
@@ -246,6 +261,29 @@ describe('identity and projects HTTP API', () => {
       })])
     await signIn(userB, 'b@example.com')
     await userB.get(`/api/projects/${projectId}`).expect(404)
+  })
+
+  it('returns owned chapter cards without internal storage fields', async () => {
+    await signIn(userA, 'a@example.com')
+    const created = await userA.post('/api/projects').send({
+      title: 'Chapter Book', bookText: 'A book.',
+    })
+    const projectId = created.body.project.id as string
+    await client.execute({
+      sql: `insert into chapters (
+        id, project_id, name, prompt, character_ids_json, image_path,
+        generation_status, generation_error, position, created_at, updated_at
+      ) values ('chapter-1', ?, 'Opening Scene', 'An opening scene.', '[]', '/internal.png', 'PENDING', null, 0, 1, 1)`,
+      args: [projectId],
+    })
+
+    const chapter = (await userA.get(`/api/projects/${projectId}`)).body.project.chapters[0]
+    expect(chapter).toEqual({
+      id: 'chapter-1', name: 'Opening Scene', prompt: 'An opening scene.',
+      generationStatus: 'PENDING', generationError: null, position: 0,
+    })
+    expect(chapter).not.toHaveProperty('imagePath')
+    expect(chapter).not.toHaveProperty('characterIdsJson')
   })
 
   it('requires a session and prevents other users from mutating pipeline state', async () => {

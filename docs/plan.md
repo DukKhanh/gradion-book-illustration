@@ -76,20 +76,26 @@ Verified:
 - local portrait persistence and authenticated retrieval
 - partial retry without regenerating completed portraits
 
-## Current
-
 ### Phase 10 — CHAPTERS Generation
 
-Implement:
 - one validated opening-scene illustration prompt
 - transactional single-chapter persistence
 - durable checkpoint recovery after lost final completion
+
+## Current
+
+### Phase 11 — ILLUSTRATIONS Generation
+
+Implement:
+- one durable final chapter illustration
+- authenticated illustration retrieval
+- checkpoint retry without regenerating durable images
 
 Models:
 - gemini-3.6-flash
 - gemini-3.1-flash-lite-image
 
-### Phase 11 — Frontend
+### Phase 12 — Frontend
 
 Implement:
 - Identity
@@ -99,7 +105,7 @@ Implement:
 - pipeline state UI
 - retry/recovery
 
-### Phase 12 — Final Testing and Documentation
+### Phase 13 — Final Testing and Documentation
 
 - backend tests
 - frontend tests

@@ -84,4 +84,30 @@ export class FileStorageService {
   async deletePortrait(portraitPath: string): Promise<void> {
     await rm(portraitPath, { force: true })
   }
+
+  async writeIllustration(input: {
+    userId: string
+    projectId: string
+    chapterId: string
+    stepStartedAt: Date
+    bytes: Uint8Array
+  }): Promise<string> {
+    const directory = join(this.imagesDirectory, input.userId, input.projectId, 'chapters', input.chapterId)
+    const illustrationPath = join(directory, `${input.stepStartedAt.getTime()}.png`)
+    await mkdir(directory, { recursive: true })
+    await writeFile(illustrationPath, input.bytes)
+    return illustrationPath
+  }
+
+  async readIllustration(illustrationPath: string): Promise<Buffer> {
+    return readFile(illustrationPath)
+  }
+
+  async illustrationExists(illustrationPath: string): Promise<boolean> {
+    try { await access(illustrationPath); return true } catch { return false }
+  }
+
+  async deleteIllustration(illustrationPath: string): Promise<void> {
+    await rm(illustrationPath, { force: true })
+  }
 }

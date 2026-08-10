@@ -18,6 +18,11 @@ import { createPortraitRouter } from './modules/pipeline/portraits/portrait.rout
 import { PortraitsStepExecutor } from './modules/pipeline/portraits/portraits-step.executor.js'
 import { ChaptersRepository } from './modules/pipeline/chapters/chapters.repository.js'
 import { ChaptersStepExecutor } from './modules/pipeline/chapters/chapters-step.executor.js'
+import { IllustrationController } from './modules/pipeline/illustrations/illustration.controller.js'
+import { IllustrationService } from './modules/pipeline/illustrations/illustration.service.js'
+import { IllustrationsRepository } from './modules/pipeline/illustrations/illustrations.repository.js'
+import { createIllustrationRouter } from './modules/pipeline/illustrations/illustration.routes.js'
+import { IllustrationsStepExecutor } from './modules/pipeline/illustrations/illustrations-step.executor.js'
 import {
   PipelineService,
 } from './modules/pipeline/pipeline.service.js'
@@ -39,6 +44,7 @@ import { GoogleGeminiStyleAdapter } from './services/gemini/google-gemini-style-
 import { GoogleGeminiCharactersAdapter } from './services/gemini/google-gemini-characters-adapter.js'
 import { GoogleGeminiPortraitAdapter } from './services/gemini/google-gemini-portrait-adapter.js'
 import { GoogleGeminiChapterAdapter } from './services/gemini/google-gemini-chapter-adapter.js'
+import { GoogleGeminiIllustrationAdapter } from './services/gemini/google-gemini-illustration-adapter.js'
 import { FileStorageService } from './storage/file-storage.service.js'
 
 type AppDependencies = {
@@ -47,6 +53,7 @@ type AppDependencies = {
   pipelineService?: PipelineService
   geminiBookController?: GeminiBookController
   portraitController?: PortraitController
+  illustrationController?: IllustrationController
 }
 
 export function createApp(dependencies: AppDependencies = {}) {
@@ -89,11 +96,19 @@ export function createApp(dependencies: AppDependencies = {}) {
           env.GEMINI_TEXT_MODEL,
         ),
       ),
+      new IllustrationsStepExecutor(
+        new IllustrationsRepository(),
+        new GoogleGeminiIllustrationAdapter(env.GEMINI_API_KEY, env.GEMINI_IMAGE_MODEL),
+        new FileStorageService(),
+      ),
     ),
     { staleAfterMs: env.PIPELINE_STALE_AFTER_MS },
   )
   const portraitController = dependencies.portraitController ?? new PortraitController(
     new PortraitService(new PortraitsRepository(), new FileStorageService()),
+  )
+  const illustrationController = dependencies.illustrationController ?? new IllustrationController(
+    new IllustrationService(new IllustrationsRepository(), new FileStorageService()),
   )
   const geminiBookController = dependencies.geminiBookController ?? new GeminiBookController(
     new GeminiBookService(
@@ -130,6 +145,7 @@ export function createApp(dependencies: AppDependencies = {}) {
   app.use('/api', createGeminiBookRouter(geminiBookController))
   app.use('/api', createPipelineRouter(pipelineService))
   app.use('/api', createPortraitRouter(portraitController))
+  app.use('/api', createIllustrationRouter(illustrationController))
 
   app.get('/api/health', (_req, res) => {
     res.status(200).json({

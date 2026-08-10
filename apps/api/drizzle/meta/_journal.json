@@ -8,6 +8,13 @@
       "when": 1786379787076,
       "tag": "0000_free_rockslide",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1786386585250,
+      "tag": "0001_tough_unus",
+      "breakpoints": true
     }
   ]
 }

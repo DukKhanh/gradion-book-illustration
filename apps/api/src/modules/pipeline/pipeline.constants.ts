@@ -1,0 +1,25 @@
+export const PIPELINE_STEPS = {
+  STYLE: 'STYLE',
+  CHARACTERS: 'CHARACTERS',
+  PORTRAITS: 'PORTRAITS',
+  CHAPTERS: 'CHAPTERS',
+  ILLUSTRATIONS: 'ILLUSTRATIONS',
+} as const
+
+export const STEP_STATES = {
+  IDLE: 'IDLE',
+  RUNNING: 'RUNNING',
+  FAILED: 'FAILED',
+} as const
+
+export const GENERATION_STATUSES = {
+  PENDING: 'PENDING',
+  RUNNING: 'RUNNING',
+  DONE: 'DONE',
+  FAILED: 'FAILED',
+} as const
+
+export const PIPELINE_LIMITS = {
+  MAX_CHARACTERS: 2,
+  MAX_CHAPTERS: 1,
+} as const

@@ -1,64 +1,186 @@
 import {
+  index,
   integer,
   sqliteTable,
   text,
+  uniqueIndex,
 } from 'drizzle-orm/sqlite-core'
 
-export const users = sqliteTable('users', {
-  id: text('id').primaryKey(),
+export const users = sqliteTable(
+  'users',
+  {
+    id: text('id').primaryKey(),
 
-  name: text('name').notNull(),
+    name: text('name').notNull(),
 
-  email: text('email')
-    .notNull()
-    .unique(),
+    email: text('email').notNull(),
 
-  createdAt: integer('created_at', {
-    mode: 'timestamp_ms',
-  }).notNull(),
-})
+    createdAt: integer('created_at', {
+      mode: 'timestamp_ms',
+    }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('users_email_unique').on(table.email),
+  ],
+)
 
-export const projects = sqliteTable('projects', {
-  id: text('id').primaryKey(),
+export const projects = sqliteTable(
+  'projects',
+  {
+    id: text('id').primaryKey(),
 
-  userId: text('user_id')
-    .notNull()
-    .references(() => users.id),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
 
-  title: text('title').notNull(),
+    title: text('title').notNull(),
 
-  bookFilePath: text('book_file_path')
-    .notNull(),
+    bookFilePath: text('book_file_path').notNull(),
 
-  completedStep: text('completed_step'),
+    completedStep: text('completed_step'),
 
-  runningStep: text('running_step'),
+    runningStep: text('running_step'),
 
-  stepState: text('step_state')
-    .notNull()
-    .default('IDLE'),
+    stepState: text('step_state')
+      .notNull()
+      .default('IDLE'),
 
-  stepStartedAt: integer('step_started_at', {
-    mode: 'timestamp_ms',
-  }),
+    stepStartedAt: integer('step_started_at', {
+      mode: 'timestamp_ms',
+    }),
 
-  stepError: text('step_error'),
+    stepError: text('step_error'),
 
-  style: text('style'),
+    style: text('style'),
 
-  geminiBookFileUri: text(
-    'gemini_book_file_uri',
-  ),
+    geminiBookFileUri: text(
+      'gemini_book_file_uri',
+    ),
 
-  geminiBookInteractionId: text(
-    'gemini_book_interaction_id',
-  ),
+    geminiBookInteractionId: text(
+      'gemini_book_interaction_id',
+    ),
 
-  createdAt: integer('created_at', {
-    mode: 'timestamp_ms',
-  }).notNull(),
+    createdAt: integer('created_at', {
+      mode: 'timestamp_ms',
+    }).notNull(),
 
-  updatedAt: integer('updated_at', {
-    mode: 'timestamp_ms',
-  }).notNull(),
-})
+    updatedAt: integer('updated_at', {
+      mode: 'timestamp_ms',
+    }).notNull(),
+  },
+  (table) => [
+    index('projects_user_id_idx').on(table.userId),
+    index('projects_created_at_idx').on(
+      table.createdAt,
+    ),
+  ],
+)
+
+export const characters = sqliteTable(
+  'characters',
+  {
+    id: text('id').primaryKey(),
+
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id, {
+        onDelete: 'cascade',
+      }),
+
+    name: text('name').notNull(),
+
+    prompt: text('prompt').notNull(),
+
+    imagePath: text('image_path'),
+
+    generationStatus: text(
+      'generation_status',
+    )
+      .notNull()
+      .default('PENDING'),
+
+    generationError: text(
+      'generation_error',
+    ),
+
+    position: integer('position').notNull(),
+
+    createdAt: integer('created_at', {
+      mode: 'timestamp_ms',
+    }).notNull(),
+
+    updatedAt: integer('updated_at', {
+      mode: 'timestamp_ms',
+    }).notNull(),
+  },
+  (table) => [
+    index('characters_project_id_idx').on(
+      table.projectId,
+    ),
+
+    uniqueIndex(
+      'characters_project_position_unique',
+    ).on(
+      table.projectId,
+      table.position,
+    ),
+  ],
+)
+
+export const chapters = sqliteTable(
+  'chapters',
+  {
+    id: text('id').primaryKey(),
+
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id, {
+        onDelete: 'cascade',
+      }),
+
+    name: text('name').notNull(),
+
+    prompt: text('prompt').notNull(),
+
+    characterIdsJson: text(
+      'character_ids_json',
+    ),
+
+    imagePath: text('image_path'),
+
+    generationStatus: text(
+      'generation_status',
+    )
+      .notNull()
+      .default('PENDING'),
+
+    generationError: text(
+      'generation_error',
+    ),
+
+    position: integer('position').notNull(),
+
+    createdAt: integer('created_at', {
+      mode: 'timestamp_ms',
+    }).notNull(),
+
+    updatedAt: integer('updated_at', {
+      mode: 'timestamp_ms',
+    }).notNull(),
+  },
+  (table) => [
+    index('chapters_project_id_idx').on(
+      table.projectId,
+    ),
+
+    uniqueIndex(
+      'chapters_project_position_unique',
+    ).on(
+      table.projectId,
+      table.position,
+    ),
+  ],
+)

@@ -40,11 +40,11 @@ const envSchema = z.object({
 
   GEMINI_TEXT_MODEL: z
     .string()
-    .default('gemini-2.5-flash'),
+    .default('gemini-3.6-flash'),
 
   GEMINI_IMAGE_MODEL: z
     .string()
-    .default('gemini-2.5-flash-image'),
+    .default('gemini-3.1-flash-lite-image'),
 
   PIPELINE_STALE_AFTER_MS: z.coerce
     .number()

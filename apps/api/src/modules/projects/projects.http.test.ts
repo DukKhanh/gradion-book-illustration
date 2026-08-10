@@ -242,7 +242,7 @@ describe('identity and projects HTTP API', () => {
     expect((await userA.get(`/api/projects/${projectId}`)).body.project.characters)
       .toEqual([expect.objectContaining({
         id: 'character-1', name: 'Mole', position: 0,
-        generationStatus: 'PENDING', imagePath: null,
+        generationStatus: 'PENDING', portraitUrl: null,
       })])
     await signIn(userB, 'b@example.com')
     await userB.get(`/api/projects/${projectId}`).expect(404)

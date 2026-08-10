@@ -4,6 +4,10 @@ import session from 'express-session'
 import multer from 'multer'
 
 import { env } from './config/env.js'
+import { GeminiBookController } from './modules/gemini-book/gemini-book.controller.js'
+import { GeminiBookRepository } from './modules/gemini-book/gemini-book.repository.js'
+import { createGeminiBookRouter } from './modules/gemini-book/gemini-book.routes.js'
+import { GeminiBookService } from './modules/gemini-book/gemini-book.service.js'
 import { PipelineRepository } from './modules/pipeline/pipeline.repository.js'
 import { createPipelineRouter } from './modules/pipeline/pipeline.routes.js'
 import {
@@ -19,12 +23,14 @@ import { createSessionRouter } from './modules/session/session.routes.js'
 import { SessionService } from './modules/session/session.service.js'
 import { UserRepository } from './modules/session/user.repository.js'
 import { HttpError } from './shared/http-error.js'
+import { GoogleGeminiBookAdapter } from './services/gemini/google-gemini-book-adapter.js'
 import { FileStorageService } from './storage/file-storage.service.js'
 
 type AppDependencies = {
   sessionController?: SessionController
   projectController?: ProjectController
   pipelineService?: PipelineService
+  geminiBookController?: GeminiBookController
 }
 
 export function createApp(dependencies: AppDependencies = {}) {
@@ -42,6 +48,17 @@ export function createApp(dependencies: AppDependencies = {}) {
     new PipelineRepository(),
     unsupportedPipelineExecutor,
     { staleAfterMs: env.PIPELINE_STALE_AFTER_MS },
+  )
+  const geminiBookController = dependencies.geminiBookController ?? new GeminiBookController(
+    new GeminiBookService(
+      new GeminiBookRepository(),
+      new FileStorageService(),
+      new GoogleGeminiBookAdapter(env.GEMINI_API_KEY),
+      {
+        apiKey: env.GEMINI_API_KEY,
+        staleAfterMs: env.GEMINI_BOOK_STALE_AFTER_MS,
+      },
+    ),
   )
 
   app.use(
@@ -64,6 +81,7 @@ export function createApp(dependencies: AppDependencies = {}) {
 
   app.use('/api', createSessionRouter(sessionController))
   app.use('/api', createProjectRouter(projectController))
+  app.use('/api', createGeminiBookRouter(geminiBookController))
   app.use('/api', createPipelineRouter(pipelineService))
 
   app.get('/api/health', (_req, res) => {

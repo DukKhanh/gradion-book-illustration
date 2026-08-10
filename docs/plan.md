@@ -44,19 +44,19 @@ Verified:
 - stale recovery
 - ownership-scoped pipeline mutations
 
-## Current
-
 ### Phase 5 — Identity and Projects
 
-Implement:
-- name/email identity
-- project CRUD required by assessment
-- paste / .txt book input
+- passwordless session identity
+- owned project list/detail/create
+- pasted text and `.txt` uploads
+- local book persistence
+
+## Current
 
 ### Phase 6 — Gemini
 
 Implement:
-- persistent book context
+- persistent Gemini book reference
 - STYLE
 - CHARACTERS
 - PORTRAITS

@@ -19,26 +19,33 @@ export type PipelineProject = {
 }
 
 export interface PipelineRepository {
-  findById(projectId: string): Promise<PipelineProject | null>
+  findByIdForUser(
+    projectId: string,
+    userId: string,
+  ): Promise<PipelineProject | null>
   acquireStep(input: {
     projectId: string
+    userId: string
     step: PipelineStep
     expected: PipelineProject
     startedAt: Date
   }): Promise<boolean>
   completeStep(input: {
     projectId: string
+    userId: string
     step: PipelineStep
     startedAt: Date
   }): Promise<boolean>
   failStep(input: {
     projectId: string
+    userId: string
     step: PipelineStep
     startedAt: Date
     error: string
   }): Promise<boolean>
   recoverStaleStep(input: {
     projectId: string
+    userId: string
     staleBefore: Date
     error: string
   }): Promise<boolean>
@@ -79,15 +86,17 @@ export class PipelineService {
   private readonly staleAfterMs: number
 
   async run(
+    userId: string,
     projectId: string,
     step: PipelineStep,
   ): Promise<void> {
-    const project = await this.requireProject(projectId)
+    const project = await this.requireProject(projectId, userId)
     this.assertCanRun(project, step)
 
     const startedAt = this.now()
     const acquired = await this.repository.acquireStep({
       projectId,
+      userId,
       step,
       expected: project,
       startedAt,
@@ -107,6 +116,7 @@ export class PipelineService {
       try {
         failed = await this.repository.failStep({
           projectId,
+          userId,
           step,
           startedAt,
           error: EXECUTION_ERROR,
@@ -126,6 +136,7 @@ export class PipelineService {
     try {
       completed = await this.repository.completeStep({
         projectId,
+        userId,
         step,
         startedAt,
       })
@@ -138,8 +149,8 @@ export class PipelineService {
     }
   }
 
-  async recoverStale(projectId: string): Promise<void> {
-    const project = await this.requireProject(projectId)
+  async recoverStale(userId: string, projectId: string): Promise<void> {
+    const project = await this.requireProject(projectId, userId)
     if (
       project.stepState !== STEP_STATES.RUNNING ||
       project.runningStep === null ||
@@ -156,6 +167,7 @@ export class PipelineService {
     )
     const recovered = await this.repository.recoverStaleStep({
       projectId,
+      userId,
       staleBefore,
       error: STALE_ERROR,
     })
@@ -170,8 +182,9 @@ export class PipelineService {
 
   private async requireProject(
     projectId: string,
+    userId: string,
   ): Promise<PipelineProject> {
-    const project = await this.repository.findById(projectId)
+    const project = await this.repository.findByIdForUser(projectId, userId)
     if (!project) {
       throw new PipelineError('Project not found.', 404)
     }

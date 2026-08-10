@@ -36,8 +36,9 @@ class InMemoryPipelineRepository
     stepError: null,
   }
 
-  async findById(
+  async findByIdForUser(
     projectId: string,
+    _userId: string,
   ): Promise<PipelineProject | null> {
     return this.project.id === projectId
       ? { ...this.project }
@@ -46,6 +47,7 @@ class InMemoryPipelineRepository
 
   async acquireStep(input: {
     projectId: string
+    userId: string
     step: PipelineStep
     expected: PipelineProject
     startedAt: Date
@@ -67,6 +69,7 @@ class InMemoryPipelineRepository
 
   async completeStep(input: {
     projectId: string
+    userId: string
     step: PipelineStep
     startedAt: Date
   }): Promise<boolean> {
@@ -92,6 +95,7 @@ class InMemoryPipelineRepository
 
   async failStep(input: {
     projectId: string
+    userId: string
     step: PipelineStep
     startedAt: Date
     error: string
@@ -117,6 +121,7 @@ class InMemoryPipelineRepository
 
   async recoverStaleStep(input: {
     projectId: string
+    userId: string
     staleBefore: Date
     error: string
   }): Promise<boolean> {
@@ -179,13 +184,13 @@ describe('PipelineService', () => {
 
   it('runs steps strictly in order', async () => {
     await expect(
-      service.run('project-1', PIPELINE_STEPS.CHARACTERS),
+      service.run('user-1', 'project-1', PIPELINE_STEPS.CHARACTERS),
     ).rejects.toMatchObject({ statusCode: 409 })
 
     expect(executor.execute).not.toHaveBeenCalled()
 
-    await service.run('project-1', PIPELINE_STEPS.STYLE)
-    await service.run('project-1', PIPELINE_STEPS.CHARACTERS)
+    await service.run('user-1', 'project-1', PIPELINE_STEPS.STYLE)
+    await service.run('user-1', 'project-1', PIPELINE_STEPS.CHARACTERS)
 
     expect(executor.execute).toHaveBeenCalledTimes(2)
     expect(repository.project.completedStep).toBe(
@@ -202,8 +207,8 @@ describe('PipelineService', () => {
         }),
     )
 
-    const first = service.run('project-1', PIPELINE_STEPS.STYLE)
-    const second = service.run('project-1', PIPELINE_STEPS.STYLE)
+    const first = service.run('user-1', 'project-1', PIPELINE_STEPS.STYLE)
+    const second = service.run('user-1', 'project-1', PIPELINE_STEPS.STYLE)
 
     await expect(second).rejects.toMatchObject({ statusCode: 409 })
     expect(executor.execute).toHaveBeenCalledTimes(1)
@@ -218,7 +223,7 @@ describe('PipelineService', () => {
     )
 
     await expect(
-      service.run('project-1', PIPELINE_STEPS.STYLE),
+      service.run('user-1', 'project-1', PIPELINE_STEPS.STYLE),
     ).rejects.toMatchObject({ statusCode: 502 })
 
     expect(repository.project).toMatchObject({
@@ -230,7 +235,7 @@ describe('PipelineService', () => {
     })
 
     executor.execute = vi.fn().mockResolvedValue(undefined)
-    await service.run('project-1', PIPELINE_STEPS.STYLE)
+    await service.run('user-1', 'project-1', PIPELINE_STEPS.STYLE)
 
     expect(repository.project).toMatchObject({
       completedStep: PIPELINE_STEPS.STYLE,
@@ -243,7 +248,7 @@ describe('PipelineService', () => {
     repository.completeResult = false
 
     await expect(
-      service.run('project-1', PIPELINE_STEPS.STYLE),
+      service.run('user-1', 'project-1', PIPELINE_STEPS.STYLE),
     ).rejects.toMatchObject({
       statusCode: 500,
       message: 'Pipeline completion could not be persisted.',
@@ -258,7 +263,7 @@ describe('PipelineService', () => {
     executor.execute = vi.fn().mockRejectedValue(new Error('provider error'))
 
     await expect(
-      service.run('project-1', PIPELINE_STEPS.STYLE),
+      service.run('user-1', 'project-1', PIPELINE_STEPS.STYLE),
     ).rejects.toMatchObject({
       statusCode: 500,
       message: 'Pipeline failure could not be persisted.',
@@ -275,7 +280,7 @@ describe('PipelineService', () => {
       stepStartedAt: new Date('2026-08-11T09:58:00.000Z'),
     }
 
-    await service.recoverStale('project-1')
+    await service.recoverStale('user-1', 'project-1')
 
     expect(repository.project).toMatchObject({
       runningStep: PIPELINE_STEPS.STYLE,
@@ -284,7 +289,7 @@ describe('PipelineService', () => {
       stepError: 'Pipeline execution timed out and can be retried.',
     })
 
-    await service.run('project-1', PIPELINE_STEPS.STYLE)
+    await service.run('user-1', 'project-1', PIPELINE_STEPS.STYLE)
     expect(executor.execute).toHaveBeenCalledTimes(1)
   })
 
@@ -296,7 +301,7 @@ describe('PipelineService', () => {
       stepStartedAt: new Date('2026-08-11T09:59:30.000Z'),
     }
 
-    await expect(service.recoverStale('project-1')).rejects.toMatchObject({
+    await expect(service.recoverStale('user-1', 'project-1')).rejects.toMatchObject({
       statusCode: 409,
     })
   })

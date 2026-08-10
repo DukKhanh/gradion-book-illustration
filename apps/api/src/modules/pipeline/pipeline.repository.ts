@@ -36,8 +36,9 @@ export class PipelineRepository
 {
   constructor(private readonly database: typeof db = db) {}
 
-  async findById(
+  async findByIdForUser(
     projectId: string,
+    userId: string,
   ): Promise<PipelineProject | null> {
     const [project] = await this.database
       .select({
@@ -49,7 +50,12 @@ export class PipelineRepository
         stepError: projects.stepError,
       })
       .from(projects)
-      .where(eq(projects.id, projectId))
+      .where(
+        and(
+          eq(projects.id, projectId),
+          eq(projects.userId, userId),
+        ),
+      )
 
     return project
       ? {
@@ -63,6 +69,7 @@ export class PipelineRepository
 
   async acquireStep(input: {
     projectId: string
+    userId: string
     step: PipelineStep
     expected: PipelineProject
     startedAt: Date
@@ -79,6 +86,7 @@ export class PipelineRepository
       .where(
         and(
           eq(projects.id, input.projectId),
+          eq(projects.userId, input.userId),
           completedStepEquals(input.expected.completedStep),
           runningStepEquals(input.expected.runningStep),
           eq(projects.stepState, input.expected.stepState),
@@ -97,6 +105,7 @@ export class PipelineRepository
 
   async completeStep(input: {
     projectId: string
+    userId: string
     step: PipelineStep
     startedAt: Date
   }): Promise<boolean> {
@@ -113,6 +122,7 @@ export class PipelineRepository
       .where(
         and(
           eq(projects.id, input.projectId),
+          eq(projects.userId, input.userId),
           eq(projects.runningStep, input.step),
           eq(projects.stepState, STEP_STATES.RUNNING),
           eq(projects.stepStartedAt, input.startedAt),
@@ -125,6 +135,7 @@ export class PipelineRepository
 
   async failStep(input: {
     projectId: string
+    userId: string
     step: PipelineStep
     startedAt: Date
     error: string
@@ -140,6 +151,7 @@ export class PipelineRepository
       .where(
         and(
           eq(projects.id, input.projectId),
+          eq(projects.userId, input.userId),
           eq(projects.runningStep, input.step),
           eq(projects.stepState, STEP_STATES.RUNNING),
           eq(projects.stepStartedAt, input.startedAt),
@@ -152,6 +164,7 @@ export class PipelineRepository
 
   async recoverStaleStep(input: {
     projectId: string
+    userId: string
     staleBefore: Date
     error: string
   }): Promise<boolean> {
@@ -166,6 +179,7 @@ export class PipelineRepository
       .where(
         and(
           eq(projects.id, input.projectId),
+          eq(projects.userId, input.userId),
           eq(projects.stepState, STEP_STATES.RUNNING),
           isNotNull(projects.runningStep),
           lt(projects.stepStartedAt, input.staleBefore),

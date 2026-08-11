@@ -20,6 +20,7 @@ export function createProjectRouter(
     upload.single('bookFile'),
     controller.create,
   )
+  router.get('/projects/:projectId/book', requireSession, controller.bookText)
   router.get('/projects/:projectId', requireSession, controller.detail)
   return router
 }

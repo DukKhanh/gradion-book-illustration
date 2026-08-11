@@ -33,6 +33,19 @@ export class ProjectController {
     }
   }
 
+  bookText = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const projectId = typeof req.params.projectId === 'string'
+        ? req.params.projectId
+        : ''
+      res.status(200).json({
+        bookText: await this.service.bookText(req.session.userId!, projectId),
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
   detail = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const projectId = typeof req.params.projectId === 'string'

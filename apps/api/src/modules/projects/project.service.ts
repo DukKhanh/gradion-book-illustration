@@ -128,6 +128,19 @@ export class ProjectService {
     }
   }
 
+  async bookText(userId: string, projectId: string): Promise<string> {
+    const project = await this.projects.findByIdForUser(projectId, userId)
+    if (!project) {
+      throw new HttpError('Project not found.', 404)
+    }
+
+    try {
+      return await this.storage.readBook(project.bookFilePath)
+    } catch {
+      throw new HttpError('Book text could not be read.', 500)
+    }
+  }
+
   private resolveBookText(
     rawBookText: unknown,
     upload: Express.Multer.File | undefined,

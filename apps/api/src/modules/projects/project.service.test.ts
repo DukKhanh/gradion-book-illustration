@@ -73,4 +73,51 @@ describe('ProjectService', () => {
     expect(detail).not.toHaveProperty('geminiBookInteractionId')
     expect(detail).not.toHaveProperty('bookFilePath')
   })
+  it('reads the full owned book text from private local storage', async () => {
+    const bookFilePath = '/private/user-1/project-1/book.txt'
+    const projects = {
+      findByIdForUser: vi.fn().mockResolvedValue({ id: 'project-1', bookFilePath }),
+    } as unknown as ProjectRepository
+    const storage = {
+      readBook: vi.fn().mockResolvedValue('Chapter One\n\nFull original text.'),
+    } as unknown as FileStorageService
+    const service = new ProjectService(projects, storage)
+
+    await expect(service.bookText('user-1', 'project-1'))
+      .resolves.toBe('Chapter One\n\nFull original text.')
+    expect(storage.readBook).toHaveBeenCalledWith(bookFilePath)
+  })
+
+  it('does not read book storage when the project is not owned', async () => {
+    const projects = {
+      findByIdForUser: vi.fn().mockResolvedValue(null),
+    } as unknown as ProjectRepository
+    const storage = { readBook: vi.fn() } as unknown as FileStorageService
+    const service = new ProjectService(projects, storage)
+
+    await expect(service.bookText('user-2', 'project-1')).rejects.toMatchObject({
+      statusCode: 404,
+      message: 'Project not found.',
+    })
+    expect(storage.readBook).not.toHaveBeenCalled()
+  })
+
+  it('returns a safe error when the durable source book cannot be read', async () => {
+    const projects = {
+      findByIdForUser: vi.fn().mockResolvedValue({
+        id: 'project-1',
+        bookFilePath: '/missing/book.txt',
+      }),
+    } as unknown as ProjectRepository
+    const storage = {
+      readBook: vi.fn().mockRejectedValue(new Error('ENOENT')),
+    } as unknown as FileStorageService
+    const service = new ProjectService(projects, storage)
+
+    await expect(service.bookText('user-1', 'project-1')).rejects.toMatchObject({
+      statusCode: 500,
+      message: 'Book text could not be read.',
+    })
+  })
+
 })

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import {
@@ -9,6 +9,8 @@ import {
 } from '../../api/generation'
 import type { ProjectDetailDto, PipelineStep } from '../../api/types'
 import { nextPipelineStep, retryPipelineStep } from './generation'
+
+const PORTRAIT_POLL_INTERVAL_MS = 1_500
 
 const stepLabels: Record<PipelineStep, string> = {
   STYLE: 'art direction',
@@ -49,6 +51,36 @@ export function WorkspaceGenerationPanel({ project }: { project: ProjectDetailDt
       await queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
     },
   })
+  const portraitGenerationPending =
+    action.isPending &&
+    action.variables?.kind === 'run-step' &&
+    action.variables.step === 'PORTRAITS'
+
+  useEffect(() => {
+    if (!portraitGenerationPending) return
+
+    let disposed = false
+
+    const refreshProject = async () => {
+      if (disposed) return
+      await queryClient.refetchQueries({
+        queryKey: ['projects', project.id],
+        type: 'active',
+      })
+    }
+
+    void refreshProject()
+
+    const interval = window.setInterval(() => {
+      void refreshProject()
+    }, PORTRAIT_POLL_INTERVAL_MS)
+
+    return () => {
+      disposed = true
+      window.clearInterval(interval)
+    }
+  }, [portraitGenerationPending, project.id, queryClient])
+
   const error = action.isError ? action.error.message : null
   const isPending = action.isPending
 

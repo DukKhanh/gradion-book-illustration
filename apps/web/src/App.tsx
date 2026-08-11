@@ -10,6 +10,9 @@ import { useSession } from './features/session/SessionProvider'
 import { projectProgress } from './features/projects/progress'
 import { WorkspaceGenerationPanel } from './features/projects/WorkspaceGenerationPanel'
 import { WorkspacePipelineStepper } from './features/projects/WorkspacePipelineStepper'
+import { BookTextDisclosure } from './features/projects/BookTextDisclosure'
+import { CharacterCard } from './features/projects/CharacterCard'
+import { ChapterCard } from './features/projects/ChapterCard'
 
 function Bootstrap() {
   return <main className="bootstrap">Checking your session…</main>
@@ -146,15 +149,50 @@ function Workspace() {
 }
 
 function WorkspaceContent({ project }: { project: ProjectDetailDto }) {
-  return <main className="page workspace"><Link className="back-link" to="/projects">← Projects</Link><div className="workspace-heading"><div><p className="eyebrow">PROJECT WORKSPACE</p><h1>{project.title}</h1></div><PipelineProgress project={project} /></div>
-    <section className="workspace-status"><span className="status">{projectProgress(project.pipeline).status}</span><p>{project.pipeline.stepError ?? 'Your saved project state is shown below.'}</p></section>
+  const progress = projectProgress(project.pipeline)
+
+  return <main className="page workspace">
+    <Link className="back-link" to="/projects">← Projects</Link>
+    <div className="workspace-heading">
+      <div>
+        <p className="eyebrow">PROJECT WORKSPACE</p>
+        <h1>{project.title}</h1>
+        <p className="workspace-created">Created {new Date(project.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</p>
+      </div>
+      <PipelineProgress project={project} />
+    </div>
+
+    <section className="workspace-status">
+      <span className={`status ${progress.status.toLowerCase().replace(' ', '-')}`}>{progress.status}</span>
+      <p>{project.pipeline.stepError ?? 'Your saved project state is shown below.'}</p>
+    </section>
+
     <WorkspacePipelineStepper pipeline={project.pipeline} />
     <WorkspaceGenerationPanel project={project} />
-    <div className="workspace-grid"><section className="workspace-main">
-      <ArtifactSection title="Art direction">{project.style ? <p>{project.style}</p> : <EmptyArtifact text="No art direction has been generated yet." />}</ArtifactSection>
-      <ArtifactSection title="Characters">{project.characters.length ? <div className="character-grid">{project.characters.map((character) => <article className="character-card" key={character.id}>{character.portraitUrl ? <img src={character.portraitUrl} alt={`Portrait of ${character.name}`} /> : <div className="image-placeholder">Portrait pending</div>}<h3>{character.name}</h3><p>{character.prompt}</p></article>)}</div> : <EmptyArtifact text="Characters will appear here when they are available." />}</ArtifactSection>
-      <ArtifactSection title="Chapter">{project.chapters.length ? project.chapters.map((chapter) => <article className="chapter-card" key={chapter.id}><div className="chapter-card__media">{chapter.illustrationUrl ? <img className="chapter-card__image" src={chapter.illustrationUrl} alt={`Illustration for ${chapter.name}`} loading="lazy" /> : <div className="illustration-placeholder">Illustration pending</div>}</div><div className="chapter-card__content"><h3 className="chapter-card__title">{chapter.name}</h3><p className="chapter-card__description">{chapter.prompt}</p></div></article>) : <EmptyArtifact text="Your chapter will appear here when it is available." />}</ArtifactSection>
-    </section><aside className="workspace-aside"><h2>Progress</h2><PipelineProgress project={project} /><p>Results shown here are loaded from the saved project.</p></aside></div>
+
+    <section className="workspace-main">
+      <ArtifactSection title="Art direction">
+        {project.style ? <p className="art-direction-copy">{project.style}</p> : <EmptyArtifact text="No art direction has been generated yet." />}
+      </ArtifactSection>
+
+      <ArtifactSection title="Book text">
+        <BookTextDisclosure projectId={project.id} />
+      </ArtifactSection>
+
+      <ArtifactSection title="Characters">
+        {project.characters.length ? (
+          <div className="character-grid">
+            {project.characters.map((character) => <CharacterCard key={character.id} character={character} />)}
+          </div>
+        ) : <EmptyArtifact text="Characters will appear here when they are available." />}
+      </ArtifactSection>
+
+      <ArtifactSection title="Chapter">
+        {project.chapters.length
+          ? project.chapters.map((chapter) => <ChapterCard key={chapter.id} chapter={chapter} />)
+          : <EmptyArtifact text="Your chapter will appear here when it is available." />}
+      </ArtifactSection>
+    </section>
   </main>
 }
 

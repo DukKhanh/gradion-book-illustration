@@ -352,6 +352,38 @@ describe('identity and projects HTTP API', () => {
       .expect(404)
     expect(geminiUploadCalls).toEqual([])
   })
+  it('serves the full source book only to the authenticated project owner', async () => {
+    await signIn(userA, 'a@example.com')
+    const created = await userA.post('/api/projects').send({
+      title: 'Readable Book',
+      bookText: 'Chapter One\n\nThe complete source manuscript.',
+    })
+    const projectId = created.body.project.id as string
+
+    const response = await userA.get(`/api/projects/${projectId}/book`)
+    expect(response.status).toBe(200)
+    expect(response.body).toEqual({
+      bookText: 'Chapter One\n\nThe complete source manuscript.',
+    })
+    expect(response.body).not.toHaveProperty('bookFilePath')
+  })
+
+  it('requires authentication to read source book text', async () => {
+    await request(app).get('/api/projects/project-1/book').expect(401)
+  })
+
+  it('does not expose source book text to another user', async () => {
+    await signIn(userA, 'a@example.com')
+    const created = await userA.post('/api/projects').send({
+      title: 'Private Book',
+      bookText: 'Private manuscript.',
+    })
+    const projectId = created.body.project.id as string
+
+    await signIn(userB, 'b@example.com')
+    await userB.get(`/api/projects/${projectId}/book`).expect(404)
+  })
+
 })
 
 async function signIn(agent: Agent, email: string): Promise<void> {

@@ -11,6 +11,11 @@ export async function getProject(projectId: string): Promise<ProjectDetailDto> {
   return result.project
 }
 
+export async function getProjectBookText(projectId: string): Promise<string> {
+  const result = await apiRequest<{ bookText: string }>(`/projects/${projectId}/book`)
+  return result.bookText
+}
+
 export type CreateProjectInput = {
   title: string
   bookText?: string

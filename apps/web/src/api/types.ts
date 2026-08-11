@@ -10,6 +10,12 @@ export type PipelineDto = {
   stepError: string | null
 }
 
+export type GeminiBookDto = {
+  state: 'IDLE' | 'RUNNING' | 'FAILED' | 'READY'
+  startedAt: string | null
+  error: string | null
+}
+
 export type ProjectDto = {
   id: string
   title: string
@@ -29,4 +35,8 @@ export type ChapterDto = {
   generationStatus: string, generationError: string | null, position: number
 }
 
-export type ProjectDetailDto = ProjectDto & { characters: CharacterDto[], chapters: ChapterDto[] }
+export type ProjectDetailDto = ProjectDto & {
+  geminiBook: GeminiBookDto
+  characters: CharacterDto[]
+  chapters: ChapterDto[]
+}

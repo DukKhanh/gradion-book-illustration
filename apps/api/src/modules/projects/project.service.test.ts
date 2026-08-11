@@ -35,4 +35,42 @@ describe('ProjectService', () => {
     expect(storage.writeBook).toHaveBeenCalledOnce()
     expect(storage.deleteBook).toHaveBeenCalledWith(bookPath)
   })
+
+  it('exposes only safe Gemini book preparation state in project detail', async () => {
+    const startedAt = new Date('2026-01-02T03:04:05.000Z')
+    const projects = {
+      findByIdForUser: vi.fn().mockResolvedValue({
+        id: 'project-1',
+        title: 'A book',
+        createdAt: startedAt,
+        updatedAt: startedAt,
+        completedStep: null,
+        runningStep: null,
+        stepState: 'IDLE',
+        stepStartedAt: null,
+        stepError: null,
+        style: null,
+        geminiBookState: 'FAILED',
+        geminiBookStartedAt: startedAt,
+        geminiBookError: 'Gemini book preparation failed.',
+        geminiBookFileUri: 'provider://private-file',
+        geminiBookInteractionId: 'private-interaction',
+        bookFilePath: 'data/books/user-1/project-1/book.txt',
+      }),
+      listCharactersForProjectForUser: vi.fn().mockResolvedValue([]),
+      listChaptersForProjectForUser: vi.fn().mockResolvedValue([]),
+    } as unknown as ProjectRepository
+    const service = new ProjectService(projects, {} as FileStorageService)
+
+    const detail = await service.detail('user-1', 'project-1')
+
+    expect(detail.geminiBook).toEqual({
+      state: 'FAILED',
+      startedAt,
+      error: 'Gemini book preparation failed.',
+    })
+    expect(detail).not.toHaveProperty('geminiBookFileUri')
+    expect(detail).not.toHaveProperty('geminiBookInteractionId')
+    expect(detail).not.toHaveProperty('bookFilePath')
+  })
 })

@@ -88,11 +88,8 @@ Verified:
 - authenticated illustration retrieval
 - checkpoint retry without regenerating durable images
 
-## Current
-
 ### Phase 12 — Frontend Foundation & Project Flow
 
-Implement:
 - session bootstrap, identity, and sign out
 - owned project library and project creation
 - pasted text and `.txt` upload flow
@@ -101,17 +98,14 @@ Implement:
 
 ### Phase 13 — Generation Workflow
 
-Implement:
 - explicit Gemini-book initialization and pipeline actions
 - STYLE through ILLUSTRATIONS controls
 - failures, retries, and stale recovery UI
 
+## Current
+
 ### Phase 14 — Final Testing and Documentation
 
-- backend tests
-- frontend tests
-- mocked integration test
-- real UAT
-- README
-- DECISIONS.md
-- TESTING.md
+- audit and approved final corrections
+- final typecheck, test, build, and migration verification pending
+- submission documentation and hygiene review pending

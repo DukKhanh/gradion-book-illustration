@@ -33,7 +33,7 @@ function setup(overrides: Partial<{
   } as unknown as PortraitsRepository
   const storage: PortraitStorage = {
     portraitExists: vi.fn().mockResolvedValue(overrides.exists ?? false),
-    writePortrait: vi.fn(async (input) => `/images/${input.characterId}/${input.stepStartedAt.getTime()}.png`),
+    writePortrait: vi.fn(async (input) => `/images/${input.characterId}/${input.stepStartedAt.getTime()}.jpg`),
     deletePortrait: vi.fn(),
   }
   return { repository, storage }
@@ -45,7 +45,7 @@ describe('PortraitsStepExecutor', () => {
       id: 'one', name: 'One', prompt, position: 0, imagePath: null,
       generationStatus: 'PENDING', generationError: null,
     }] })
-    const gemini: GeminiPortraitAdapter = { generatePortrait: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/png' }) }
+    const gemini: GeminiPortraitAdapter = { generatePortrait: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/jpeg' }) }
     await new PortraitsStepExecutor(repository, gemini, storage).execute(runInput())
     expect(gemini.generatePortrait).toHaveBeenCalledOnce()
   })
@@ -71,7 +71,7 @@ describe('PortraitsStepExecutor', () => {
 
   it('generates two portraits sequentially in character-position order', async () => {
     const { repository, storage } = setup()
-    const gemini: GeminiPortraitAdapter = { generatePortrait: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/png' }) }
+    const gemini: GeminiPortraitAdapter = { generatePortrait: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/jpeg' }) }
     await new PortraitsStepExecutor(repository, gemini, storage).execute(runInput())
     expect(gemini.generatePortrait).toHaveBeenNthCalledWith(1, expect.objectContaining({ characterName: 'One', style: 'watercolor' }))
     expect(gemini.generatePortrait).toHaveBeenNthCalledWith(2, expect.objectContaining({ characterName: 'Two', style: 'watercolor' }))
@@ -81,11 +81,16 @@ describe('PortraitsStepExecutor', () => {
   it('preserves the first checkpoint when the second provider call fails', async () => {
     const { repository, storage } = setup()
     const gemini: GeminiPortraitAdapter = { generatePortrait: vi.fn()
-      .mockResolvedValueOnce({ bytes: new Uint8Array([1]), mimeType: 'image/png' })
+      .mockResolvedValueOnce({ bytes: new Uint8Array([1]), mimeType: 'image/jpeg' })
       .mockRejectedValueOnce(new Error('provider')) }
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     await expect(new PortraitsStepExecutor(repository, gemini, storage).execute(runInput())).rejects.toBeDefined()
     expect(repository.completePortrait).toHaveBeenCalledTimes(1)
     expect(repository.failPortrait).toHaveBeenCalledWith(expect.objectContaining({ characterId: 'two' }))
+    expect(errorLog).toHaveBeenCalledWith('Portrait generation failed.', {
+      projectId: 'project-1', characterId: 'two', error: 'provider',
+    })
+    errorLog.mockRestore()
   })
 
   it('regenerates a stale character RUNNING status on a newly acquired retry', async () => {
@@ -93,7 +98,7 @@ describe('PortraitsStepExecutor', () => {
       id: 'one', name: 'One', prompt, position: 0, imagePath: null,
       generationStatus: 'RUNNING', generationError: null,
     }] })
-    const gemini: GeminiPortraitAdapter = { generatePortrait: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/png' }) }
+    const gemini: GeminiPortraitAdapter = { generatePortrait: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/jpeg' }) }
     await new PortraitsStepExecutor(repository, gemini, storage).execute(runInput())
     expect(repository.beginPortrait).toHaveBeenCalledOnce()
     expect(gemini.generatePortrait).toHaveBeenCalledOnce()
@@ -104,7 +109,7 @@ describe('PortraitsStepExecutor', () => {
       id: 'one', name: 'One', prompt, position: 0, imagePath: '/missing.png',
       generationStatus: 'DONE', generationError: null,
     }], exists: false })
-    const gemini: GeminiPortraitAdapter = { generatePortrait: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/png' }) }
+    const gemini: GeminiPortraitAdapter = { generatePortrait: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/jpeg' }) }
     await new PortraitsStepExecutor(repository, gemini, storage).execute(runInput())
     expect(gemini.generatePortrait).toHaveBeenCalledOnce()
   })
@@ -120,10 +125,23 @@ describe('PortraitsStepExecutor', () => {
     expect(repository.beginPortrait).not.toHaveBeenCalled()
   })
 
-  it('deletes a newly written run-scoped file when the DB checkpoint fails', async () => {
+  it('deletes a newly written run-scoped file without failing the portrait when its checkpoint transition is lost', async () => {
     const { repository, storage } = setup({ complete: false })
+    const gemini: GeminiPortraitAdapter = { generatePortrait: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/jpeg' }) }
+    await expect(new PortraitsStepExecutor(repository, gemini, storage).execute(runInput())).rejects.toMatchObject({
+      statusCode: 500,
+      message: 'Portrait checkpoint could not be persisted.',
+    })
+    expect(storage.deletePortrait).toHaveBeenCalledWith('/images/one/1786442400000.jpg')
+    expect(repository.failPortrait).not.toHaveBeenCalled()
+  })
+
+  it('rejects a non-JPEG portrait result without a durable checkpoint', async () => {
+    const { repository, storage } = setup()
     const gemini: GeminiPortraitAdapter = { generatePortrait: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/png' }) }
+
     await expect(new PortraitsStepExecutor(repository, gemini, storage).execute(runInput())).rejects.toBeDefined()
-    expect(storage.deletePortrait).toHaveBeenCalledWith('/images/one/1786442400000.png')
+    expect(storage.writePortrait).not.toHaveBeenCalled()
+    expect(repository.completePortrait).not.toHaveBeenCalled()
   })
 })

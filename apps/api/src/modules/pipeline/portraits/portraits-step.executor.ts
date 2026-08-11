@@ -39,14 +39,23 @@ export class PortraitsStepExecutor implements PipelineExecutor {
         const image = await this.gemini.generatePortrait({
           characterName: character.name, characterPrompt: character.prompt, style: style.data,
         })
-        if (image.mimeType !== 'image/png' || image.bytes.length === 0) throw new Error('Invalid portrait image.')
+        if (image.mimeType !== 'image/jpeg' || image.bytes.length === 0) throw new Error('Invalid portrait image.')
         imagePath = await this.storage.writePortrait({
           userId: input.userId, projectId: input.projectId, characterId: character.id,
           stepStartedAt: input.startedAt, bytes: image.bytes,
         })
         const completed = await this.portraits.completePortrait({ ...input, characterId: character.id, imagePath })
-        if (!completed) throw new Error('Portrait checkpoint could not be persisted.')
-      } catch {
+        if (!completed) {
+          try { await this.storage.deletePortrait(imagePath) } catch { /* orphan is inaccessible */ }
+          throw new PipelineError('Portrait checkpoint could not be persisted.', 500)
+        }
+      } catch (error) {
+        if (error instanceof PipelineError) throw error
+        console.error('Portrait generation failed.', {
+          projectId: input.projectId,
+          characterId: character.id,
+          error: error instanceof Error ? error.message : String(error),
+        })
         if (imagePath) {
           try { await this.storage.deletePortrait(imagePath) } catch { /* orphan is inaccessible */ }
         }

@@ -24,13 +24,13 @@ export class GoogleGeminiPortraitAdapter implements GeminiPortraitAdapter {
       input: portraitPrompt(input),
       response_format: {
         type: 'image',
-        mime_type: 'image/png',
+        mime_type: 'image/jpeg',
         aspect_ratio: '9:16',
       },
     })
     const image = interaction.output_image
-    if (!image?.data || image.mime_type !== 'image/png') {
-      throw new Error('Gemini did not return a PNG portrait.')
+    if (!image?.data || image.mime_type !== 'image/jpeg') {
+      throw new Error('Gemini did not return a JPEG portrait.')
     }
     return { bytes: Buffer.from(image.data, 'base64'), mimeType: image.mime_type }
   }

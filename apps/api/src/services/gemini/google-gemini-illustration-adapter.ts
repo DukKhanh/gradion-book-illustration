@@ -15,10 +15,10 @@ export class GoogleGeminiIllustrationAdapter implements GeminiIllustrationAdapte
     const interaction = await this.client.interactions.create({
       model: this.model,
       input: illustrationPrompt(input),
-      response_format: { type: 'image', mime_type: 'image/png', aspect_ratio: '3:2' },
+      response_format: { type: 'image', mime_type: 'image/jpeg', aspect_ratio: '3:2' },
     })
     const image = interaction.output_image
-    if (!image?.data || image.mime_type !== 'image/png') throw new Error('Gemini did not return a PNG illustration.')
+    if (!image?.data || image.mime_type !== 'image/jpeg') throw new Error('Gemini did not return a JPEG illustration.')
     const bytes = Buffer.from(image.data, 'base64')
     if (bytes.length === 0) throw new Error('Gemini returned an empty illustration.')
     return { bytes, mimeType: image.mime_type }

@@ -45,8 +45,12 @@ export class PortraitsStepExecutor implements PipelineExecutor {
           stepStartedAt: input.startedAt, bytes: image.bytes,
         })
         const completed = await this.portraits.completePortrait({ ...input, characterId: character.id, imagePath })
-        if (!completed) throw new Error('Portrait checkpoint could not be persisted.')
+        if (!completed) {
+          try { await this.storage.deletePortrait(imagePath) } catch { /* orphan is inaccessible */ }
+          throw new PipelineError('Portrait checkpoint could not be persisted.', 500)
+        }
       } catch (error) {
+        if (error instanceof PipelineError) throw error
         console.error('Portrait generation failed.', {
           projectId: input.projectId,
           characterId: character.id,

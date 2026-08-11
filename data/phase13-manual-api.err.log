@@ -1,5 +1,0 @@
-Portrait generation failed. {
-  projectId: '1ec2b10b-bb43-493f-bd20-8169dba6cf5f',
-  characterId: 'b5f78137-e2d7-4e2c-a530-5d8a4befd2c4',
-  error: 'Unable to make request: TypeError: fetch failed'
-}

@@ -96,21 +96,16 @@ Verified:
 - persisted project workspace and read-only pipeline progress
 - responsive frontend foundation
 
-## Current
-
 ### Phase 13 — Generation Workflow
 
-Implement:
 - explicit Gemini-book initialization and pipeline actions
 - STYLE through ILLUSTRATIONS controls
 - failures, retries, and stale recovery UI
 
+## Current
+
 ### Phase 14 — Final Testing and Documentation
 
-- backend tests
-- frontend tests
-- mocked integration test
-- real UAT
-- README
-- DECISIONS.md
-- TESTING.md
+- audit and approved final corrections
+- final typecheck, test, build, and migration verification pending
+- submission documentation and hygiene review pending

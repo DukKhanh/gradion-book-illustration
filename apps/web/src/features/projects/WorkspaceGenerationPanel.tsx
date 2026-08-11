@@ -24,9 +24,14 @@ type Action =
   | { kind: 'recover-pipeline' }
   | { kind: 'run-step'; step: PipelineStep; style?: string }
 
+type StyleIntent =
+  | { kind: 'manual'; style: string }
+  | { kind: 'ai' }
+
 export function WorkspaceGenerationPanel({ project }: { project: ProjectDetailDto }) {
   const queryClient = useQueryClient()
   const [style, setStyle] = useState('')
+  const [styleIntent, setStyleIntent] = useState<StyleIntent | null>(null)
   const action = useMutation({
     mutationFn: async (input: Action) => {
       if (input.kind === 'initialize-book') return initializeGeminiBook(project.id)
@@ -39,6 +44,9 @@ export function WorkspaceGenerationPanel({ project }: { project: ProjectDetailDt
         queryClient.invalidateQueries({ queryKey: ['projects', project.id] }),
         queryClient.invalidateQueries({ queryKey: ['projects'] }),
       ])
+    },
+    onError: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
     },
   })
   const error = action.isError ? action.error.message : null
@@ -75,6 +83,39 @@ export function WorkspaceGenerationPanel({ project }: { project: ProjectDetailDt
 
   const retry = retryPipelineStep(project.pipeline)
   if (retry) {
+    if (retry === 'STYLE') {
+      return <GenerationPanel title="Art direction failed">
+        <p role="alert">{project.pipeline.stepError ?? 'This step failed and can be retried.'}</p>
+        {styleIntent?.kind === 'manual' ? <>
+          <p>Retrying will reuse your manual art direction.</p>
+          <button className="primary-button" type="button" disabled={isPending} onClick={() => action.mutate({ kind: 'run-step', step: 'STYLE', style: styleIntent.style })}>
+            {isPending ? 'Retrying art direction…' : 'Retry art direction'}
+          </button>
+        </> : styleIntent?.kind === 'ai' ? <>
+          <p>Retrying will use AI-generated art direction.</p>
+          <button className="primary-button" type="button" disabled={isPending} onClick={() => action.mutate({ kind: 'run-step', step: 'STYLE' })}>
+            {isPending ? 'Retrying art direction…' : 'Retry art direction'}
+          </button>
+        </> : <>
+          <p>Choose a manual art direction, or explicitly retry with AI.</p>
+          <label className="style-field" htmlFor="retry-manual-style">Art direction (optional)<input id="retry-manual-style" value={style} onChange={(event) => setStyle(event.target.value)} placeholder="Enter a manual art direction" /></label>
+          <button className="primary-button" type="button" disabled={isPending || style.trim().length === 0} onClick={() => {
+            const manualStyle = style.trim()
+            setStyleIntent({ kind: 'manual', style: manualStyle })
+            action.mutate({ kind: 'run-step', step: 'STYLE', style: manualStyle })
+          }}>
+            {isPending ? 'Retrying art direction…' : 'Retry manual art direction'}
+          </button>
+          <button className="secondary-button" type="button" disabled={isPending} onClick={() => {
+            setStyleIntent({ kind: 'ai' })
+            action.mutate({ kind: 'run-step', step: 'STYLE' })
+          }}>
+            {isPending ? 'Retrying art direction…' : 'Retry with AI'}
+          </button>
+        </>}
+        <ActionError error={error} />
+      </GenerationPanel>
+    }
     return <GenerationPanel title={`${label(retry)} failed`}>
       <p role="alert">{project.pipeline.stepError ?? 'This step failed and can be retried.'}</p>
       <button className="primary-button" type="button" disabled={isPending} onClick={() => action.mutate({ kind: 'run-step', step: retry })}>
@@ -94,6 +135,7 @@ export function WorkspaceGenerationPanel({ project }: { project: ProjectDetailDt
     {next === 'STYLE' && <label className="style-field" htmlFor="manual-style">Art direction (optional)<input id="manual-style" value={style} onChange={(event) => setStyle(event.target.value)} placeholder="Leave blank for AI-generated art direction" /></label>}
     <button className="primary-button" type="button" disabled={isPending} onClick={() => {
       const manualStyle = next === 'STYLE' ? style.trim() : undefined
+      if (next === 'STYLE') setStyleIntent(manualStyle ? { kind: 'manual', style: manualStyle } : { kind: 'ai' })
       action.mutate({ kind: 'run-step', step: next, ...(manualStyle ? { style: manualStyle } : {}) })
     }}>
       {isPending ? `Generating ${label(next)}…` : `Generate ${label(next)}`}

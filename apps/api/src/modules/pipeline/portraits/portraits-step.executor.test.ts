@@ -125,11 +125,15 @@ describe('PortraitsStepExecutor', () => {
     expect(repository.beginPortrait).not.toHaveBeenCalled()
   })
 
-  it('deletes a newly written run-scoped file when the DB checkpoint fails', async () => {
+  it('deletes a newly written run-scoped file without failing the portrait when its checkpoint transition is lost', async () => {
     const { repository, storage } = setup({ complete: false })
     const gemini: GeminiPortraitAdapter = { generatePortrait: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/jpeg' }) }
-    await expect(new PortraitsStepExecutor(repository, gemini, storage).execute(runInput())).rejects.toBeDefined()
+    await expect(new PortraitsStepExecutor(repository, gemini, storage).execute(runInput())).rejects.toMatchObject({
+      statusCode: 500,
+      message: 'Portrait checkpoint could not be persisted.',
+    })
     expect(storage.deletePortrait).toHaveBeenCalledWith('/images/one/1786442400000.jpg')
+    expect(repository.failPortrait).not.toHaveBeenCalled()
   })
 
   it('rejects a non-JPEG portrait result without a durable checkpoint', async () => {

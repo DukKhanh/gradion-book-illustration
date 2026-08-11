@@ -216,6 +216,59 @@ describe('frontend project flow', () => {
     expect((styleCall?.[1] as RequestInit).body).toBeUndefined()
   })
 
+  it('retries a failed manual STYLE request with the same trimmed manual value', async () => {
+    let detail = projectDetail()
+    const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>((url: string) => {
+      if (url === '/api/session') return Promise.resolve(json({ user }))
+      if (url === '/api/projects/project-1') return Promise.resolve(json({ project: detail }))
+      if (url === '/api/projects/project-1/pipeline/STYLE') {
+        if (fetchMock.mock.calls.filter(([calledUrl]) => calledUrl === url).length === 1) {
+          detail = projectDetail({ pipeline: { completedStep: null, runningStep: 'STYLE', stepState: 'FAILED', stepStartedAt: null, stepError: 'Generation failed.' } })
+          return Promise.resolve(json({ error: 'Pipeline execution failed.' }, 502))
+        }
+        return Promise.resolve(json({ status: 'completed' }))
+      }
+      return Promise.resolve(json({ error: 'Unexpected request' }, 500))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const ui = userEvent.setup()
+    renderApp('/projects/project-1')
+    await ui.type(await screen.findByLabelText('Art direction (optional)'), '  watercolor  ')
+    await ui.click(screen.getByRole('button', { name: 'Generate art direction' }))
+    await screen.findByRole('button', { name: 'Retry art direction' })
+    await ui.click(screen.getByRole('button', { name: 'Retry art direction' }))
+
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([url]) => url === '/api/projects/project-1/pipeline/STYLE')).toHaveLength(2))
+    const retry = fetchMock.mock.calls.filter(([url]) => url === '/api/projects/project-1/pipeline/STYLE')[1][1] as RequestInit
+    expect(retry.body).toBe(JSON.stringify({ style: 'watercolor' }))
+  })
+
+  it('retries a failed AI STYLE request without a style body', async () => {
+    let detail = projectDetail()
+    const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>((url: string) => {
+      if (url === '/api/session') return Promise.resolve(json({ user }))
+      if (url === '/api/projects/project-1') return Promise.resolve(json({ project: detail }))
+      if (url === '/api/projects/project-1/pipeline/STYLE') {
+        if (fetchMock.mock.calls.filter(([calledUrl]) => calledUrl === url).length === 1) {
+          detail = projectDetail({ pipeline: { completedStep: null, runningStep: 'STYLE', stepState: 'FAILED', stepStartedAt: null, stepError: 'Generation failed.' } })
+          return Promise.resolve(json({ error: 'Pipeline execution failed.' }, 502))
+        }
+        return Promise.resolve(json({ status: 'completed' }))
+      }
+      return Promise.resolve(json({ error: 'Unexpected request' }, 500))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const ui = userEvent.setup()
+    renderApp('/projects/project-1')
+    await ui.click(await screen.findByRole('button', { name: 'Generate art direction' }))
+    await screen.findByRole('button', { name: 'Retry art direction' })
+    await ui.click(screen.getByRole('button', { name: 'Retry art direction' }))
+
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([url]) => url === '/api/projects/project-1/pipeline/STYLE')).toHaveLength(2))
+    const retry = fetchMock.mock.calls.filter(([url]) => url === '/api/projects/project-1/pipeline/STYLE')[1][1] as RequestInit
+    expect(retry.body).toBeUndefined()
+  })
+
   it('shows only the failed pipeline step retry and keeps recovery separate while running', async () => {
     const failed = projectDetail({ pipeline: { completedStep: 'CHARACTERS', runningStep: 'PORTRAITS', stepState: 'FAILED', stepStartedAt: null, stepError: 'Generation failed.' } })
     const fetchMock = workspaceFetch(failed)

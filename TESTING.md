@@ -27,4 +27,8 @@ Real Gemini is used only for controlled manual UAT.
 
 ## Final Test Report
 
-A real test run will be added before submission.
+Phase 14 verification is run from the root workspace using the documented API,
+web, root, migration, and diff commands. Automated tests use fake or mocked
+Gemini boundaries and consume no Gemini quota.
+
+The final command outcomes are recorded in the Phase 14 prompt document.

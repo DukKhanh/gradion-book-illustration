@@ -9,6 +9,7 @@ import type { ProjectDetailDto, ProjectDto } from './api/types'
 import { useSession } from './features/session/SessionProvider'
 import { projectProgress } from './features/projects/progress'
 import { WorkspaceGenerationPanel } from './features/projects/WorkspaceGenerationPanel'
+import { WorkspacePipelineStepper } from './features/projects/WorkspacePipelineStepper'
 
 function Bootstrap() {
   return <main className="bootstrap">Checking your session…</main>
@@ -147,6 +148,7 @@ function Workspace() {
 function WorkspaceContent({ project }: { project: ProjectDetailDto }) {
   return <main className="page workspace"><Link className="back-link" to="/projects">← Projects</Link><div className="workspace-heading"><div><p className="eyebrow">PROJECT WORKSPACE</p><h1>{project.title}</h1></div><PipelineProgress project={project} /></div>
     <section className="workspace-status"><span className="status">{projectProgress(project.pipeline).status}</span><p>{project.pipeline.stepError ?? 'Your saved project state is shown below.'}</p></section>
+    <WorkspacePipelineStepper pipeline={project.pipeline} />
     <WorkspaceGenerationPanel project={project} />
     <div className="workspace-grid"><section className="workspace-main">
       <ArtifactSection title="Art direction">{project.style ? <p>{project.style}</p> : <EmptyArtifact text="No art direction has been generated yet." />}</ArtifactSection>

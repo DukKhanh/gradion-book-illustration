@@ -12,39 +12,15 @@ The application is designed to run locally and keeps pipeline progress, generate
 
 ### Project Library
 
-<!-- Replace with the final project library screenshot. -->
-
-```text
-docs/screenshots/project-library.png
-```
-
-<!--
 ![Project Library](docs/screenshots/project-library.png)
--->
 
 ### Generation Workspace
 
-<!-- Replace with a workspace screenshot showing the five-step pipeline and generated characters. -->
-
-```text
-docs/screenshots/generation-workspace.png
-```
-
-<!--
 ![Generation Workspace](docs/screenshots/generation-workspace.png)
--->
 
 ### Completed Project
 
-<!-- Replace with the completed project screenshot showing portraits and the final chapter illustration. -->
-
-```text
-docs/screenshots/completed-project.png
-```
-
-<!--
 ![Completed Project](docs/screenshots/completed-project.png)
--->
 
 ## Architecture and Stack
 

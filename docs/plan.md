@@ -88,16 +88,15 @@ Verified:
 - authenticated illustration retrieval
 - checkpoint retry without regenerating durable images
 
-## Current
-
 ### Phase 12 — Frontend Foundation & Project Flow
 
-Implement:
 - session bootstrap, identity, and sign out
 - owned project library and project creation
 - pasted text and `.txt` upload flow
 - persisted project workspace and read-only pipeline progress
 - responsive frontend foundation
+
+## Current
 
 ### Phase 13 — Generation Workflow
 

@@ -311,7 +311,7 @@ describe('identity and projects HTTP API', () => {
     expect((await userA.get(`/api/projects/${projectId}`)).body.project.chapters[0].illustrationUrl)
       .toBe(`/api/projects/${projectId}/chapters/chapter-image/illustration`)
     await userA.get(`/api/projects/${projectId}/chapters/chapter-image/illustration`)
-      .expect('Content-Type', /image\/png/).expect(200)
+      .expect('Content-Type', /image\/jpeg/).expect(200)
     await signIn(userB, 'b@example.com')
     await userB.get(`/api/projects/${projectId}/chapters/chapter-image/illustration`).expect(404)
   })

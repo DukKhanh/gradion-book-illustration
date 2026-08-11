@@ -32,7 +32,7 @@ describe('illustration local storage', () => {
         userId: 'user-1', projectId: 'project-1', chapterId: 'chapter-1',
         stepStartedAt: new Date('2026-08-11T10:00:00.000Z'), bytes: new Uint8Array([1]),
       })
-      expect(path).toBe(join(directory, 'user-1', 'project-1', 'chapters', 'chapter-1', '1786442400000.png'))
+      expect(path).toBe(join(directory, 'user-1', 'project-1', 'chapters', 'chapter-1', '1786442400000.jpg'))
     } finally { await rm(directory, { recursive: true, force: true }) }
   })
 })

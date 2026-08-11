@@ -25,15 +25,15 @@ function setup(overrides: Partial<{ chapter: Record<string, unknown>, begin: boo
   } as unknown as IllustrationsRepository
   const storage: IllustrationStorage = {
     illustrationExists: vi.fn().mockResolvedValue(overrides.exists ?? false),
-    writeIllustration: vi.fn().mockResolvedValue('/images/chapter-1/1786442400000.png'), deleteIllustration: vi.fn(),
+    writeIllustration: vi.fn().mockResolvedValue('/images/chapter-1/1786442400000.jpg'), deleteIllustration: vi.fn(),
   }
   return { project, repository, storage }
 }
 
 describe('IllustrationsStepExecutor', () => {
-  it('generates one PNG from only the chapter name, prompt, and STYLE', async () => {
+  it('generates one JPEG from only the chapter name, prompt, and STYLE', async () => {
     const { repository, storage } = setup()
-    const gemini: GeminiIllustrationAdapter = { generateIllustration: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/png' }) }
+    const gemini: GeminiIllustrationAdapter = { generateIllustration: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/jpeg' }) }
     await new IllustrationsStepExecutor(repository, gemini, storage).execute(input())
     expect(gemini.generateIllustration).toHaveBeenCalledWith({ chapterName: 'Opening Scene', chapterPrompt: 'A warm opening scene.', style: 'watercolor' })
     expect(JSON.stringify(vi.mocked(gemini.generateIllustration).mock.calls[0]?.[0])).not.toContain('character-1')
@@ -65,7 +65,7 @@ describe('IllustrationsStepExecutor', () => {
       { generationStatus: 'DONE', imagePath: '/missing.png' },
     ]) {
       const { repository, storage } = setup({ chapter, exists: false })
-      const gemini: GeminiIllustrationAdapter = { generateIllustration: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/png' }) }
+      const gemini: GeminiIllustrationAdapter = { generateIllustration: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/jpeg' }) }
       await new IllustrationsStepExecutor(repository, gemini, storage).execute(input())
       expect(gemini.generateIllustration).toHaveBeenCalledOnce()
     }
@@ -81,11 +81,11 @@ describe('IllustrationsStepExecutor', () => {
 
   it('cleans up only the newly written file when the DONE checkpoint fails', async () => {
     const { repository, storage } = setup({ complete: false })
-    const gemini: GeminiIllustrationAdapter = { generateIllustration: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/png' }) }
+    const gemini: GeminiIllustrationAdapter = { generateIllustration: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/jpeg' }) }
     await expect(new IllustrationsStepExecutor(repository, gemini, storage).execute(input())).rejects.toMatchObject({
       statusCode: 500, message: 'Illustration checkpoint could not be persisted.',
     })
-    expect(storage.deleteIllustration).toHaveBeenCalledWith('/images/chapter-1/1786442400000.png')
+    expect(storage.deleteIllustration).toHaveBeenCalledWith('/images/chapter-1/1786442400000.jpg')
     expect(repository.failIllustration).not.toHaveBeenCalled()
   })
 
@@ -95,7 +95,14 @@ describe('IllustrationsStepExecutor', () => {
     expect(provider.repository.completeIllustration).not.toHaveBeenCalled()
     const filesystem = setup()
     filesystem.storage.writeIllustration = vi.fn().mockRejectedValue(new Error('disk'))
-    await expect(new IllustrationsStepExecutor(filesystem.repository, { generateIllustration: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/png' }) }, filesystem.storage).execute(input())).rejects.toBeDefined()
+    await expect(new IllustrationsStepExecutor(filesystem.repository, { generateIllustration: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/jpeg' }) }, filesystem.storage).execute(input())).rejects.toBeDefined()
     expect(filesystem.repository.completeIllustration).not.toHaveBeenCalled()
+  })
+
+  it('rejects a non-JPEG illustration result without a durable checkpoint', async () => {
+    const { repository, storage } = setup()
+    await expect(new IllustrationsStepExecutor(repository, { generateIllustration: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/png' }) }, storage).execute(input())).rejects.toBeDefined()
+    expect(storage.writeIllustration).not.toHaveBeenCalled()
+    expect(repository.completeIllustration).not.toHaveBeenCalled()
   })
 })

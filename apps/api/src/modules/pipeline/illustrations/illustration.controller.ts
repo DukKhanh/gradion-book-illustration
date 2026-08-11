@@ -9,7 +9,7 @@ export class IllustrationController {
     try {
       const projectId = typeof req.params.projectId === 'string' ? req.params.projectId : ''
       const chapterId = typeof req.params.chapterId === 'string' ? req.params.chapterId : ''
-      res.type('image/png').send(await this.service.read(req.session.userId!, projectId, chapterId))
+      res.type('image/jpeg').send(await this.service.read(req.session.userId!, projectId, chapterId))
     } catch (error) { next(error) }
   }
 }

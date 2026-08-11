@@ -10,7 +10,7 @@ export class PortraitController {
       const projectId = typeof req.params.projectId === 'string' ? req.params.projectId : ''
       const characterId = typeof req.params.characterId === 'string' ? req.params.characterId : ''
       const image = await this.service.read(req.session.userId!, projectId, characterId)
-      res.type('image/png').send(image)
+      res.type('image/jpeg').send(image)
     } catch (error) { next(error) }
   }
 }

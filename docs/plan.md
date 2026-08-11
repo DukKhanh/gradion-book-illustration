@@ -82,30 +82,31 @@ Verified:
 - transactional single-chapter persistence
 - durable checkpoint recovery after lost final completion
 
-## Current
-
 ### Phase 11 — ILLUSTRATIONS Generation
 
-Implement:
 - one durable final chapter illustration
 - authenticated illustration retrieval
 - checkpoint retry without regenerating durable images
 
-Models:
-- gemini-3.6-flash
-- gemini-3.1-flash-lite-image
+## Current
 
-### Phase 12 — Frontend
+### Phase 12 — Frontend Foundation & Project Flow
 
 Implement:
-- Identity
-- Projects
-- New Project
-- Project Detail
-- pipeline state UI
-- retry/recovery
+- session bootstrap, identity, and sign out
+- owned project library and project creation
+- pasted text and `.txt` upload flow
+- persisted project workspace and read-only pipeline progress
+- responsive frontend foundation
 
-### Phase 13 — Final Testing and Documentation
+### Phase 13 — Generation Workflow
+
+Implement:
+- explicit Gemini-book initialization and pipeline actions
+- STYLE through ILLUSTRATIONS controls
+- failures, retries, and stale recovery UI
+
+### Phase 14 — Final Testing and Documentation
 
 - backend tests
 - frontend tests

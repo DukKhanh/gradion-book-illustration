@@ -27,7 +27,7 @@ function makeService(gemini: GeminiIllustrationAdapter) {
     findForExecution: vi.fn().mockResolvedValue(project), beginIllustration: vi.fn().mockResolvedValue(true),
     completeIllustration: vi.fn(async (input: { imagePath: string }) => { project.chapters[0]!.generationStatus = 'DONE'; project.chapters[0]!.imagePath = input.imagePath; return true }), failIllustration: vi.fn().mockResolvedValue(true),
   } as unknown as IllustrationsRepository
-  const storage: IllustrationStorage = { illustrationExists: vi.fn(async (path) => path === '/image.png'), writeIllustration: vi.fn().mockResolvedValue('/image.png'), deleteIllustration: vi.fn() }
+  const storage: IllustrationStorage = { illustrationExists: vi.fn(async (path) => path === '/image.jpg'), writeIllustration: vi.fn().mockResolvedValue('/image.jpg'), deleteIllustration: vi.fn() }
   let now = new Date('2026-08-11T10:00:00.000Z')
   return { pipeline, service: new PipelineService(pipeline, new IllustrationsStepExecutor(repository, gemini, storage), { staleAfterMs: 60_000, now: () => now }), setNow: (value: Date) => { now = value } }
 }
@@ -40,13 +40,13 @@ describe('ILLUSTRATIONS through PipelineService', () => {
     await expect(blocked.service.run('user-1', 'project-1', PIPELINE_STEPS.ILLUSTRATIONS)).rejects.toMatchObject({ statusCode: 409 })
     expect(beforeChapters.generateIllustration).not.toHaveBeenCalled()
 
-    const normal: GeminiIllustrationAdapter = { generateIllustration: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/png' }) }
+    const normal: GeminiIllustrationAdapter = { generateIllustration: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/jpeg' }) }
     const completed = makeService(normal)
     await completed.service.run('user-1', 'project-1', PIPELINE_STEPS.ILLUSTRATIONS)
     await expect(completed.service.run('user-1', 'project-1', PIPELINE_STEPS.ILLUSTRATIONS)).rejects.toMatchObject({ statusCode: 409 })
     expect(normal.generateIllustration).toHaveBeenCalledOnce()
 
-    const retry: GeminiIllustrationAdapter = { generateIllustration: vi.fn().mockRejectedValueOnce(new Error('provider')).mockResolvedValueOnce({ bytes: new Uint8Array([1]), mimeType: 'image/png' }) }
+    const retry: GeminiIllustrationAdapter = { generateIllustration: vi.fn().mockRejectedValueOnce(new Error('provider')).mockResolvedValueOnce({ bytes: new Uint8Array([1]), mimeType: 'image/jpeg' }) }
     const failed = makeService(retry)
     await expect(failed.service.run('user-1', 'project-1', PIPELINE_STEPS.ILLUSTRATIONS)).rejects.toMatchObject({ statusCode: 502 })
     await failed.service.run('user-1', 'project-1', PIPELINE_STEPS.ILLUSTRATIONS)
@@ -55,7 +55,7 @@ describe('ILLUSTRATIONS through PipelineService', () => {
 
   it('acquires concurrent ILLUSTRATIONS requests once before the image call', async () => {
     let resolveImage: (() => void) | undefined
-    const gemini: GeminiIllustrationAdapter = { generateIllustration: vi.fn(() => new Promise<{ bytes: Uint8Array, mimeType: string }>((resolve) => { resolveImage = () => resolve({ bytes: new Uint8Array([1]), mimeType: 'image/png' }) })) }
+    const gemini: GeminiIllustrationAdapter = { generateIllustration: vi.fn(() => new Promise<{ bytes: Uint8Array, mimeType: string }>((resolve) => { resolveImage = () => resolve({ bytes: new Uint8Array([1]), mimeType: 'image/jpeg' }) })) }
     const { service } = makeService(gemini)
     const first = service.run('user-1', 'project-1', PIPELINE_STEPS.ILLUSTRATIONS)
     await expect(service.run('user-1', 'project-1', PIPELINE_STEPS.ILLUSTRATIONS)).rejects.toMatchObject({ statusCode: 409 })
@@ -65,7 +65,7 @@ describe('ILLUSTRATIONS through PipelineService', () => {
   })
 
   it('acquires concurrent work once and reuses the durable image after lost terminal completion', async () => {
-    const gemini: GeminiIllustrationAdapter = { generateIllustration: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/png' }) }
+    const gemini: GeminiIllustrationAdapter = { generateIllustration: vi.fn().mockResolvedValue({ bytes: new Uint8Array([1]), mimeType: 'image/jpeg' }) }
     const { pipeline, service, setNow } = makeService(gemini)
     pipeline.completeResult = false
     await expect(service.run('user-1', 'project-1', PIPELINE_STEPS.ILLUSTRATIONS)).rejects.toMatchObject({ statusCode: 500 })

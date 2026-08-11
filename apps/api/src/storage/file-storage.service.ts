@@ -61,7 +61,7 @@ export class FileStorageService {
     )
     const portraitPath = join(
       directory,
-      `${input.stepStartedAt.getTime()}.png`,
+      `${input.stepStartedAt.getTime()}.jpg`,
     )
     await mkdir(directory, { recursive: true })
     await writeFile(portraitPath, input.bytes)
@@ -93,7 +93,7 @@ export class FileStorageService {
     bytes: Uint8Array
   }): Promise<string> {
     const directory = join(this.imagesDirectory, input.userId, input.projectId, 'chapters', input.chapterId)
-    const illustrationPath = join(directory, `${input.stepStartedAt.getTime()}.png`)
+    const illustrationPath = join(directory, `${input.stepStartedAt.getTime()}.jpg`)
     await mkdir(directory, { recursive: true })
     await writeFile(illustrationPath, input.bytes)
     return illustrationPath

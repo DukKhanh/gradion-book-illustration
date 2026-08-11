@@ -32,7 +32,7 @@ export class IllustrationsStepExecutor implements PipelineExecutor {
     let imagePath: string | undefined
     try {
       const image = await this.gemini.generateIllustration({ chapterName: chapter.name, chapterPrompt: chapter.prompt, style: style.data })
-      if (image.mimeType !== 'image/png' || image.bytes.length === 0) throw new Error('Invalid illustration image.')
+      if (image.mimeType !== 'image/jpeg' || image.bytes.length === 0) throw new Error('Invalid illustration image.')
       imagePath = await this.storage.writeIllustration({ userId: input.userId, projectId: input.projectId, chapterId: chapter.id, stepStartedAt: input.startedAt, bytes: image.bytes })
       const completed = await this.illustrations.completeIllustration({ ...input, chapterId: chapter.id, imagePath })
       if (!completed) {

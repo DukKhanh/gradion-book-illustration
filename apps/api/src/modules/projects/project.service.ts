@@ -36,6 +36,11 @@ export type ProjectCharacterDto = {
 }
 
 export type ProjectDetailDto = ProjectDto & {
+  geminiBook: {
+    state: 'IDLE' | 'RUNNING' | 'FAILED' | 'READY'
+    startedAt: Date | null
+    error: string | null
+  }
   characters: ProjectCharacterDto[]
   chapters: ProjectChapterDto[]
 }
@@ -107,6 +112,11 @@ export class ProjectService {
     }
     return {
       ...toProjectDto(project),
+      geminiBook: {
+        state: project.geminiBookState as ProjectDetailDto['geminiBook']['state'],
+        startedAt: project.geminiBookStartedAt,
+        error: project.geminiBookError,
+      },
       characters: (await this.projects.listCharactersForProjectForUser(
         projectId,
         userId,

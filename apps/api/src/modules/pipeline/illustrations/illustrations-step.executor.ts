@@ -1,4 +1,4 @@
-import type { GeminiIllustrationAdapter } from '../../../services/gemini/gemini-illustration-adapter.js'
+import type { GeminiIllustrationAdapter, IllustrationCharacterReference } from '../../../services/gemini/gemini-illustration-adapter.js'
 import { chapterNameSchema, chapterPromptSchema } from '../chapters/chapters.schema.js'
 import { PIPELINE_STEPS } from '../pipeline.constants.js'
 import { PipelineError } from '../pipeline.errors.js'
@@ -6,10 +6,12 @@ import type { PipelineExecutor } from '../pipeline.service.js'
 import { manualStyleSchema } from '../style/style.schema.js'
 import { IllustrationsRepository, type IllustrationProject } from './illustrations.repository.js'
 
-const PREREQUISITE_ERROR = 'CHAPTERS, STYLE, and a valid chapter association are required before ILLUSTRATIONS can run.'
+const PREREQUISITE_ERROR = 'CHAPTERS, STYLE, a valid chapter association, and durable portrait references are required before ILLUSTRATIONS can run.'
 const ILLUSTRATION_ERROR = 'Illustration generation failed.'
 
 export interface IllustrationStorage {
+  readPortrait(path: string): Promise<Buffer>
+  portraitExists(path: string): Promise<boolean>
   writeIllustration(input: { userId: string, projectId: string, chapterId: string, stepStartedAt: Date, bytes: Uint8Array }): Promise<string>
   illustrationExists(path: string): Promise<boolean>
   deleteIllustration(path: string): Promise<void>
@@ -27,11 +29,17 @@ export class IllustrationsStepExecutor implements PipelineExecutor {
     if (project.completedStep !== PIPELINE_STEPS.CHAPTERS || !style.success || !chapter || project.chapters.length !== 1 || !this.validInput(project, chapter)) throw new PipelineError(PREREQUISITE_ERROR, 409)
     if (await this.isDurable(chapter)) return
 
+    const characterReferences = await this.loadCharacterReferences(project.characters)
     const begun = await this.illustrations.beginIllustration({ ...input, chapterId: chapter.id })
     if (!begun) throw new PipelineError('ILLUSTRATIONS execution is no longer current.', 500)
     let imagePath: string | undefined
     try {
-      const image = await this.gemini.generateIllustration({ chapterName: chapter.name, chapterPrompt: chapter.prompt, style: style.data })
+      const image = await this.gemini.generateIllustration({
+        chapterName: chapter.name,
+        chapterPrompt: chapter.prompt,
+        style: style.data,
+        characterReferences,
+      })
       if (image.mimeType !== 'image/jpeg' || image.bytes.length === 0) throw new Error('Invalid illustration image.')
       imagePath = await this.storage.writeIllustration({ userId: input.userId, projectId: input.projectId, chapterId: chapter.id, stepStartedAt: input.startedAt, bytes: image.bytes })
       const completed = await this.illustrations.completeIllustration({ ...input, chapterId: chapter.id, imagePath })
@@ -53,7 +61,7 @@ export class IllustrationsStepExecutor implements PipelineExecutor {
   private validInput(project: IllustrationProject, chapter: IllustrationProject['chapters'][number]): boolean {
     if (chapter.position !== 0 || !chapterNameSchema.safeParse(chapter.name).success || !chapterPromptSchema.safeParse(chapter.prompt).success) return false
     const characters = project.characters
-    if (characters.length < 1 || characters.length > 2 || !characters.every((character, position) => character.position === position && character.name.trim().length > 0 && character.prompt.trim().split(/\s+/).filter(Boolean).length >= 50)) return false
+    if (characters.length < 1 || characters.length > 2 || !characters.every((character, position) => character.position === position && character.name.trim().length > 0 && character.prompt.trim().split(/\s+/).filter(Boolean).length >= 50 && character.generationStatus === 'DONE' && character.imagePath !== null)) return false
     try {
       const ids = JSON.parse(chapter.characterIdsJson ?? '')
       const current = characters.map((character) => character.id)
@@ -61,7 +69,27 @@ export class IllustrationsStepExecutor implements PipelineExecutor {
     } catch { return false }
   }
 
+  private async loadCharacterReferences(characters: IllustrationProject['characters']): Promise<IllustrationCharacterReference[]> {
+    const references: IllustrationCharacterReference[] = []
+    for (const character of characters) {
+      if (!character.imagePath || !(await this.storage.portraitExists(character.imagePath))) throw new PipelineError(PREREQUISITE_ERROR, 409)
+      let imageBytes: Buffer
+      try {
+        imageBytes = await this.storage.readPortrait(character.imagePath)
+      } catch {
+        throw new PipelineError(PREREQUISITE_ERROR, 409)
+      }
+      if (!isJpeg(imageBytes)) throw new PipelineError(PREREQUISITE_ERROR, 409)
+      references.push({ name: character.name, prompt: character.prompt, imageBytes, mimeType: 'image/jpeg' })
+    }
+    return references
+  }
+
   private async isDurable(chapter: IllustrationProject['chapters'][number]): Promise<boolean> {
     return chapter.generationStatus === 'DONE' && chapter.imagePath !== null && await this.storage.illustrationExists(chapter.imagePath)
   }
+}
+
+function isJpeg(bytes: Uint8Array): boolean {
+  return bytes.length >= 4 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[bytes.length - 2] === 0xff && bytes[bytes.length - 1] === 0xd9
 }

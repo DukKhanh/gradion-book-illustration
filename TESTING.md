@@ -1,6 +1,6 @@
 # Testing Strategy
 
-The test suite focuses on the behavior that matters most for the assessment: pipeline correctness, resumability, failure handling, persisted state, incremental artifact visibility, and the frontend states exposed to the user.
+The test suite focuses on the behavior that matters most for the assessment: pipeline correctness, resumability, failure handling, persisted state, incremental artifact visibility, portrait-reference reuse, ownership, and the frontend states exposed to the user.
 
 Automated tests do not make real Gemini API calls or consume Gemini quota.
 
@@ -27,7 +27,11 @@ Covered areas include:
 - safe project-detail DTO exposure;
 - full source-book retrieval through an authenticated owner-only endpoint;
 - source book storage-read failure handling;
-- prevention of filesystem path exposure in public responses.
+- prevention of filesystem path exposure in public responses;
+- persisted portrait lookup for final illustration generation;
+- validation that final illustrations reuse durable portrait image references;
+- failure before Gemini execution when required portrait references are unavailable;
+- preservation of existing durable illustration checkpoints during retry/recovery paths.
 
 The backend tests use fake or mocked Gemini boundaries so failure and recovery paths can be exercised deterministically without paid API calls.
 
@@ -42,6 +46,7 @@ Covered areas include:
 - project creation from pasted text;
 - project creation from `.txt` upload;
 - mutually exclusive paste/upload sources;
+- project library created-date rendering;
 - workspace loading;
 - persisted pipeline progress;
 - five-step pipeline stepper state;
@@ -89,6 +94,29 @@ FAILED
 
 and show a completed portrait as soon as its durable backend checkpoint is available.
 
+## Portrait Reuse in Final Illustrations
+
+The ILLUSTRATIONS step reuses the durable portrait JPEGs generated earlier in the pipeline.
+
+Before the Gemini image call, the backend:
+
+- loads the persisted characters for the project;
+- verifies that required portrait generation completed successfully;
+- verifies that durable portrait paths are available;
+- reads the portrait JPEGs from local storage;
+- supplies those images as multimodal references to the Gemini image adapter;
+- combines the chapter prompt and persisted style with the portrait references.
+
+This preserves the intended character identity across portrait and chapter illustration generation without relying only on text prompts or ephemeral client state.
+
+Tests verify that:
+
+- valid persisted portrait references are passed into the illustration adapter;
+- portrait references are included in the generated Gemini request;
+- missing or invalid portrait prerequisites prevent the Gemini call;
+- no illustration checkpoint is created from invalid provider output;
+- durable completed work remains reusable during retry/recovery paths.
+
 ## Full Book Text
 
 The original source book remains stored privately on the backend.
@@ -118,9 +146,9 @@ The automated suite does not attempt to validate:
 
 - the artistic quality of Gemini-generated images;
 - the semantic quality of generated art direction;
+- the subjective visual consistency of characters across generated images;
 - the quality of character or chapter prompts produced by Gemini;
 - real Gemini availability, latency, or provider-side rate limits;
-- subjective visual consistency between generated portraits and chapter illustrations;
 - browser-level pixel-perfect responsive behavior;
 - production deployment behavior.
 
@@ -130,7 +158,9 @@ Real generation and responsive UI behavior are therefore checked separately thro
 
 ## Final Test Report
 
-The following results were captured from a real local test run from the repository root.
+The following results were captured from a real local verification run from the repository root.
+
+### Automated Tests
 
 Command:
 
@@ -148,26 +178,26 @@ Actual result:
 > vitest run --exclude dist/**
 
 Test Files  26 passed (26)
-Tests       115 passed (115)
-Duration    5.05s
+Tests       120 passed (120)
+Duration    3.81s
 
 > web@0.0.0 test
 > vitest run --passWithNoTests
 
 Test Files  5 passed (5)
-Tests       33 passed (33)
-Duration    9.75s
+Tests       34 passed (34)
+Duration    8.28s
 ```
 
 ### Result Summary
 
-- Backend: **26 test files, 115/115 tests passed**
-- Frontend: **5 test files, 33/33 tests passed**
-- Total: **31 test files, 148/148 tests passed**
+- Backend: **26 test files, 120/120 tests passed**
+- Frontend: **5 test files, 34/34 tests passed**
+- Total: **31 test files, 154/154 tests passed**
 - Failed tests: **0**
 - Real Gemini calls during automated tests: **0**
 
-Compared with the earlier Phase 14 baseline, the suite now additionally covers:
+Compared with the earlier verification baseline, the suite now additionally covers:
 
 - authenticated full source-book retrieval;
 - project ownership protection for source-book access;
@@ -175,7 +205,11 @@ Compared with the earlier Phase 14 baseline, the suite now additionally covers:
 - lazy Book Text loading;
 - Book Text cache reuse;
 - focused PORTRAITS polling;
-- prevention of polling for unrelated pipeline steps.
+- prevention of polling for unrelated pipeline steps;
+- project library created-date rendering;
+- persisted portrait-reference lookup for ILLUSTRATIONS;
+- portrait-reference propagation into the Gemini image request;
+- illustration execution guards when portrait prerequisites are incomplete.
 
 One backend negative-path test intentionally emits an error log while verifying that a non-JPEG portrait result is rejected without creating a durable checkpoint:
 
@@ -189,24 +223,97 @@ Portrait generation failed. {
 
 This is expected test behavior, not a failed test. The corresponding portrait executor test suite passes successfully.
 
-## Additional Verification
+## Typecheck Verification
 
-The repository should also be verified beyond the automated test suite with:
+Command:
 
 ```bash
-npm run typecheck --workspace=apps/api
-npm run build --workspace=apps/api
-
-npm run typecheck --workspace=apps/web
-npm run build --workspace=apps/web
-
 npm run typecheck
+```
+
+Actual result:
+
+```text
+> gradion-book-illustration@1.0.1 typecheck
+> npm run typecheck --workspace=apps/api && npm run typecheck --workspace=apps/web
+
+> @gradion/api@1.0.0 typecheck
+> tsc --noEmit
+
+> web@0.0.0 typecheck
+> tsc -b
+```
+
+Result:
+
+- API typecheck: **passed**
+- Web typecheck: **passed**
+
+## Production Build Verification
+
+Command:
+
+```bash
+npm run build
+```
+
+Actual result:
+
+```text
+> gradion-book-illustration@1.0.1 build
+> npm run build --workspace=apps/api && npm run build --workspace=apps/web
+
+> @gradion/api@1.0.0 build
+> tsc
+
+> web@0.0.0 build
+> tsc -b && vite build
+
+vite v8.2.1 building client environment for production...
+✓ 86 modules transformed.
+computing gzip size...
+dist/index.html                   0.45 kB │ gzip:  0.28 kB
+dist/assets/index-D7s7wPce.css   14.75 kB │ gzip:  3.60 kB
+dist/assets/index-R0eTlG-d.js   287.62 kB │ gzip: 89.11 kB
+
+✓ built in 219ms
+```
+
+Result:
+
+- API production build: **passed**
+- Web production build: **passed**
+
+## Git Diff Verification
+
+Command:
+
+```bash
 git diff --check
 ```
 
-The final submission should keep these checks passing alongside the root test suite.
+Result:
 
-Database migration behavior should continue to be verified against an isolated fresh database without modifying the developer database.
+```text
+No output.
+```
+
+An empty result from `git diff --check` means no whitespace errors were detected in the current diff.
+
+## Final Verification Summary
+
+The latest local verification completed successfully:
+
+```text
+Automated tests     154 / 154 passed
+Backend test files   26 / 26 passed
+Frontend test files   5 / 5 passed
+Typecheck                  passed
+API build                   passed
+Web build                   passed
+git diff --check            passed
+Real Gemini test calls           0
+```
 
 ## Manual UAT
 
@@ -234,6 +341,8 @@ Manual UAT checks that:
 - portrait generation shows per-character persisted progress;
 - the first completed portrait can appear before the full PORTRAITS request finishes;
 - already durable portraits remain available during retry;
+- final illustration generation uses the persisted portrait references;
+- character appearance remains reasonably consistent between portrait and final illustration during real Gemini UAT;
 - portraits appear from backend-provided authenticated URLs;
 - chapter illustrations appear from backend-provided authenticated URLs;
 - no pipeline step automatically chains into the next step;

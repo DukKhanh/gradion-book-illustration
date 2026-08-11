@@ -432,6 +432,22 @@ portrait 1 FAILED
 
 to resume without regenerating portrait 0.
 
+### ILLUSTRATIONS reuse durable portrait references
+
+The final chapter illustration consumes the already persisted portrait JPEGs as
+multimodal Gemini image references instead of relying only on character text or
+on a provider interaction ID. This preserves the notebook requirement that the
+scene reuse the established portraits while keeping resume behavior tied to
+application-owned durable files.
+
+Before the paid ILLUSTRATIONS call, the executor requires every chapter-linked
+character to have a `DONE` portrait checkpoint, verifies the referenced JPEG
+exists and is readable, and then supplies at most the server-bounded two
+portrait images to Gemini. Missing or corrupt portrait references fail before
+the provider call. A durable final illustration still follows the same
+write-file-then-conditional-DONE checkpoint rule, so a lost terminal pipeline
+completion can reuse the saved illustration without another paid call.
+
 ### Stale execution protection
 
 A result may be checkpointed only while the request still owns the exact
@@ -641,3 +657,15 @@ The goal is to document engineering judgment, not to create one decision per
 implementation phase.
 
 ---
+
+## If I Had One More Day
+
+I would add one mocked end-to-end integration test that drives a project through
+all five pipeline steps and verifies the final persisted artifacts after a
+simulated refresh or restart boundary.
+
+The individual step, retry, recovery, ownership, storage, and frontend-state
+tests already cover the important local behaviors well. One cross-step test
+would add confidence that the contracts between STYLE, CHARACTERS, PORTRAITS,
+CHAPTERS, and ILLUSTRATIONS stay compatible as the workflow evolves, without
+adding production infrastructure or consuming Gemini quota.

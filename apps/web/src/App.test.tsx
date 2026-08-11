@@ -120,6 +120,48 @@ describe('frontend project flow', () => {
     ).not.toBeNull()
   })
 
+  it('shows each project created date in the library', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url === '/api/session') {
+          return Promise.resolve(json({ user }))
+        }
+
+        if (url === '/api/projects') {
+          return Promise.resolve(
+            json({
+              projects: [
+                {
+                  id: 'project-1',
+                  title: 'Created Date Book',
+                  createdAt: '2026-01-02T00:00:00.000Z',
+                  updatedAt: '2026-08-11T00:00:00.000Z',
+                  style: null,
+                  pipeline: emptyPipeline,
+                },
+              ],
+            }),
+          )
+        }
+
+        return Promise.resolve(json({ error: 'Unexpected request' }, 500))
+      }),
+    )
+
+    renderApp('/projects')
+
+    const projectHeading = await screen.findByRole('heading', {
+      name: 'Created Date Book',
+    })
+
+    const projectCard = projectHeading.closest('.project-card')
+
+    expect(projectCard).not.toBeNull()
+    expect(projectCard?.querySelector('p')?.textContent).toMatch(/^Created /)
+    expect(projectCard?.textContent).not.toMatch(/Updated /)
+  })
+
   it('returns to the identity flow when an authenticated project request returns 401', async () => {
     vi.stubGlobal(
       'fetch',

@@ -8,6 +8,7 @@ import { IllustrationsRepository } from './illustrations.repository.js'
 import { IllustrationsStepExecutor, type IllustrationStorage } from './illustrations-step.executor.js'
 
 const prompt = Array.from({ length: 50 }, (_, index) => `detail${index}`).join(' ')
+const portraitJpeg = Buffer.from([0xff, 0xd8, 0x01, 0xff, 0xd9])
 
 class MemoryPipelineRepository implements PipelineRepository {
   completeResult = true
@@ -22,12 +23,12 @@ class MemoryPipelineRepository implements PipelineRepository {
 
 function makeService(gemini: GeminiIllustrationAdapter) {
   const pipeline = new MemoryPipelineRepository()
-  const project = { completedStep: PIPELINE_STEPS.CHAPTERS, style: 'watercolor', characters: [{ id: 'character-1', name: 'Mole', prompt, position: 0 }], chapters: [{ id: 'chapter-1', name: 'Opening', prompt: 'Opening scene.', characterIdsJson: '["character-1"]', imagePath: null as string | null, generationStatus: 'PENDING', generationError: null as string | null, position: 0 }] }
+  const project = { completedStep: PIPELINE_STEPS.CHAPTERS, style: 'watercolor', characters: [{ id: 'character-1', name: 'Mole', prompt, position: 0, generationStatus: 'DONE', generationError: null, imagePath: '/portrait.jpg' }], chapters: [{ id: 'chapter-1', name: 'Opening', prompt: 'Opening scene.', characterIdsJson: '["character-1"]', imagePath: null as string | null, generationStatus: 'PENDING', generationError: null as string | null, position: 0 }] }
   const repository = {
     findForExecution: vi.fn().mockResolvedValue(project), beginIllustration: vi.fn().mockResolvedValue(true),
     completeIllustration: vi.fn(async (input: { imagePath: string }) => { project.chapters[0]!.generationStatus = 'DONE'; project.chapters[0]!.imagePath = input.imagePath; return true }), failIllustration: vi.fn().mockResolvedValue(true),
   } as unknown as IllustrationsRepository
-  const storage: IllustrationStorage = { illustrationExists: vi.fn(async (path) => path === '/image.jpg'), writeIllustration: vi.fn().mockResolvedValue('/image.jpg'), deleteIllustration: vi.fn() }
+  const storage: IllustrationStorage = { readPortrait: vi.fn().mockResolvedValue(portraitJpeg), portraitExists: vi.fn().mockResolvedValue(true), illustrationExists: vi.fn(async (path) => path === '/image.jpg'), writeIllustration: vi.fn().mockResolvedValue('/image.jpg'), deleteIllustration: vi.fn() }
   let now = new Date('2026-08-11T10:00:00.000Z')
   return { pipeline, service: new PipelineService(pipeline, new IllustrationsStepExecutor(repository, gemini, storage), { staleAfterMs: 60_000, now: () => now }), setNow: (value: Date) => { now = value } }
 }

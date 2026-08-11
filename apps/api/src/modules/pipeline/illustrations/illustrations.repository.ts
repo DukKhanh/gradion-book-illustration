@@ -7,7 +7,15 @@ import { PIPELINE_STEPS, STEP_STATES } from '../pipeline.constants.js'
 export type IllustrationProject = {
   completedStep: string | null
   style: string | null
-  characters: Array<{ id: string, name: string, prompt: string, position: number }>
+  characters: Array<{
+    id: string
+    name: string
+    prompt: string
+    imagePath: string | null
+    generationStatus: string
+    generationError: string | null
+    position: number
+  }>
   chapters: Array<{ id: string, name: string, prompt: string, characterIdsJson: string | null, imagePath: string | null, generationStatus: string, generationError: string | null, position: number }>
 }
 
@@ -20,8 +28,15 @@ export class IllustrationsRepository {
     const [project] = await this.database.select({ completedStep: projects.completedStep, style: projects.style })
       .from(projects).where(and(eq(projects.id, projectId), eq(projects.userId, userId)))
     if (!project) return null
-    const storedCharacters = await this.database.select({ id: characters.id, name: characters.name, prompt: characters.prompt, position: characters.position })
-      .from(characters).where(eq(characters.projectId, projectId)).orderBy(asc(characters.position))
+    const storedCharacters = await this.database.select({
+      id: characters.id,
+      name: characters.name,
+      prompt: characters.prompt,
+      imagePath: characters.imagePath,
+      generationStatus: characters.generationStatus,
+      generationError: characters.generationError,
+      position: characters.position,
+    }).from(characters).where(eq(characters.projectId, projectId)).orderBy(asc(characters.position))
     const storedChapters = await this.database.select({ id: chapters.id, name: chapters.name, prompt: chapters.prompt, characterIdsJson: chapters.characterIdsJson, imagePath: chapters.imagePath, generationStatus: chapters.generationStatus, generationError: chapters.generationError, position: chapters.position })
       .from(chapters).where(eq(chapters.projectId, projectId)).orderBy(asc(chapters.position))
     return { ...project, characters: storedCharacters, chapters: storedChapters }

@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai'
 
-import type { GeminiIllustrationAdapter } from './gemini-illustration-adapter.js'
+import type { GeminiIllustrationAdapter, IllustrationCharacterReference } from './gemini-illustration-adapter.js'
 import { illustrationPrompt } from './prompts/illustration.prompt.js'
 
 export class GoogleGeminiIllustrationAdapter implements GeminiIllustrationAdapter {
@@ -10,11 +10,33 @@ export class GoogleGeminiIllustrationAdapter implements GeminiIllustrationAdapte
     this.client = new GoogleGenAI({ apiKey: apiKey ?? '' })
   }
 
-  async generateIllustration(input: { chapterName: string, chapterPrompt: string, style: string }): Promise<{ bytes: Uint8Array, mimeType: string }> {
+  async generateIllustration(input: {
+    chapterName: string
+    chapterPrompt: string
+    style: string
+    characterReferences: IllustrationCharacterReference[]
+  }): Promise<{ bytes: Uint8Array, mimeType: string }> {
     if (!this.apiKey?.trim()) throw new Error('Gemini API key is not configured.')
+    if (input.characterReferences.length < 1 || input.characterReferences.length > 2) throw new Error('One or two portrait references are required.')
+
+    const prompt = illustrationPrompt({
+      chapterName: input.chapterName,
+      chapterPrompt: input.chapterPrompt,
+      style: input.style,
+      characterReferences: input.characterReferences.map(({ name, prompt: characterPrompt }) => ({ name, prompt: characterPrompt })),
+    })
+
+    const interactionInput = [
+      { type: 'text' as const, text: prompt },
+      ...input.characterReferences.flatMap((character, index) => [
+        { type: 'text' as const, text: `Portrait reference ${index + 1}: ${character.name}` },
+        { type: 'image' as const, mime_type: character.mimeType, data: Buffer.from(character.imageBytes).toString('base64') },
+      ]),
+    ]
+
     const interaction = await this.client.interactions.create({
       model: this.model,
-      input: illustrationPrompt(input),
+      input: interactionInput,
       response_format: { type: 'image', mime_type: 'image/jpeg', aspect_ratio: '3:2' },
     })
     const image = interaction.output_image

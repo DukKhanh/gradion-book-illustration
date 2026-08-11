@@ -22,10 +22,33 @@ describe('IllustrationsRepository', () => {
       character_ids_json text, image_path text, generation_status text not null, generation_error text,
       position integer not null, created_at integer not null, updated_at integer not null
     )`)
+    await client.execute(`create table characters (
+      id text primary key, project_id text not null, name text not null, prompt text not null,
+      image_path text, generation_status text not null, generation_error text,
+      position integer not null, created_at integer not null, updated_at integer not null
+    )`)
     await client.execute({ sql: `insert into projects values ('project-1', 'user-1', 'CHAPTERS', 'ILLUSTRATIONS', 'RUNNING', ?, 'watercolor', ?)`, args: [startedAt.getTime(), startedAt.getTime()] })
     await client.execute(`insert into chapters values ('chapter-1', 'project-1', 'Opening', 'Prompt', '[]', null, 'PENDING', null, 0, 1, 1)`)
   })
   afterEach(() => client.close())
+
+  it('loads durable portrait checkpoint fields for illustration execution', async () => {
+    await client.execute(`insert into characters values ('character-1', 'project-1', 'Mole', 'Portrait prompt', '/images/mole.jpg', 'DONE', null, 0, 1, 1)`)
+
+    const project = await repository.findForExecution('project-1', 'user-1')
+
+    expect(project?.characters).toEqual([
+      {
+        id: 'character-1',
+        name: 'Mole',
+        prompt: 'Portrait prompt',
+        imagePath: '/images/mole.jpg',
+        generationStatus: 'DONE',
+        generationError: null,
+        position: 0,
+      },
+    ])
+  })
 
   it('accepts the current run through RUNNING and durable DONE checkpoint', async () => {
     await expect(repository.beginIllustration(run)).resolves.toBe(true)

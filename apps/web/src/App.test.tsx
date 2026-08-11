@@ -163,7 +163,11 @@ describe('frontend project flow', () => {
     vi.stubGlobal('fetch', fetchMock)
     renderApp('/projects/project-1')
     expect((await screen.findByAltText('Portrait of Mina')).getAttribute('src')).toBe(detail.characters[0].portraitUrl)
-    expect(screen.getByAltText('Illustration for The arrival').getAttribute('src')).toBe(detail.chapters[0].illustrationUrl)
+    const chapterIllustration = screen.getByAltText('Illustration for The arrival')
+    expect(chapterIllustration.getAttribute('src')).toBe(detail.chapters[0].illustrationUrl)
+    expect(chapterIllustration.getAttribute('loading')).toBe('lazy')
+    expect(chapterIllustration.closest('.chapter-card__media')).not.toBeNull()
+    expect(screen.getByText('Mina arrives').closest('.chapter-card__content')).not.toBeNull()
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/pipeline'))).toBe(false)
   })
 

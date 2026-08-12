@@ -2,133 +2,76 @@
 
 ## Overview
 
-The application uses a modular monolith with reduced Clean Architecture
-principles.
+The backend is a modular monolith using reduced Clean Architecture principles. Business modules define the small capabilities they require through ports/contracts, while Google Gemini and filesystem storage are implemented in the infrastructure layer. The composition root connects both sides with constructor injection.
 
-The goal is to keep business logic separated and testable without adding
-enterprise-level abstractions that are unnecessary for this assessment.
+## Dependency flow
 
-## System
+```text
+HTTP
+ ↓
+Route
+ ↓
+Controller
+ ↓
+Service / Pipeline Executor
+ ↓
+Port
+ ↑
+Infrastructure Adapter
+ ↓
+External System
+```
 
-React
-  |
-  | REST
-  v
-Express
-  |
-  v
-Service layer
-  |
-  +--> Repository --> SQLite
-  |
-  +--> GeminiService --> Gemini API
-  |
-  +--> FileStorageService --> Local filesystem
+For generation:
 
-## Backend Structure
+```text
+Pipeline Executor → Generation Port ← Google Gemini Adapter → Google Gemini API
+```
 
+For durable files:
+
+```text
+Project / Artifact Service → Storage Port ← FileStorageService → Filesystem
+```
+
+## Backend structure
+
+```text
 apps/api/src/
+├── composition/
+│   └── create-application-modules.ts
 ├── config/
 ├── db/
+├── infrastructure/
+│   ├── gemini/
+│   └── storage/
 ├── modules/
-│   ├── session/
+│   ├── gemini-book/
+│   ├── pipeline/
 │   ├── projects/
-│   └── pipeline/
-├── services/
-│   └── gemini/
-├── storage/
-├── middleware/
+│   └── session/
 ├── shared/
 ├── app.ts
 └── server.ts
+```
 
-Each feature may contain:
+Each module contains only the responsibilities it needs, such as routes, controllers, services, repositories, schemas, ports, and tests. Ports live beside their consumers so the application, rather than an external provider, defines the required capability.
 
-- routes
-- controller
-- service
-- repository
-- schema
-- types
-
-Files are added only when they have a real responsibility.
-
-## Responsibility
-
-Controller:
-HTTP only.
-
-Service:
-Business logic and orchestration.
-
-Repository:
-Database operations and atomic state transitions.
-
-GeminiService:
-Gemini API integration.
-
-FileStorageService:
-Book and generated image persistence.
+`create-application-modules.ts` is the composition root. It creates repositories and infrastructure adapters, then injects them into controllers, services, and pipeline executors. `app.ts` only configures Express, middleware, routes, and error handling.
 
 ## Pipeline
 
-STYLE
-→ CHARACTERS
-→ PORTRAITS
-→ CHAPTERS
-→ ILLUSTRATIONS
+```text
+STYLE → CHARACTERS → PORTRAITS → CHAPTERS → ILLUSTRATIONS
+```
 
-Progress state and execution state are separate:
+Pipeline progress and execution state are persisted separately through `completedStep`, `runningStep`, `stepState`, `stepStartedAt`, and `stepError`. The backend atomically acquires a step before calling Gemini; failed and stale work remains explicitly recoverable and retryable.
 
-- completedStep
-- runningStep
-- stepState
-- stepStartedAt
-- stepError
+## Persistence and integrations
 
-## Concurrency
+- Repositories use Drizzle and SQLite for users, projects, pipeline state, characters, and chapters.
+- `FileStorageService` persists book text, portraits, and illustrations using the existing local path layout.
+- Google Gemini adapters implement the book-reference and generation ports with `gemini-3.6-flash` for text and `gemini-3.1-flash-lite-image` for images.
+- Automated tests mock ports for business behavior and test filesystem/Gemini implementations independently where appropriate.
 
-The backend is the source of truth.
-
-A step must be acquired atomically before Gemini is called.
-
-Frontend button disabling alone is not considered concurrency protection.
-
-## Persistence
-
-SQLite:
-- users
-- projects
-- characters
-- chapters
-- pipeline state
-
-Local filesystem:
-- book text
-- portraits
-- illustrations
-
-## Gemini
-
-Text:
-gemini-3.6-flash
-
-Image:
-gemini-3.1-flash-lite-image
-
-Cost controls:
-
-- book context reused;
-- 2 characters maximum;
-- 1 chapter maximum;
-- no automatic retries;
-- incremental image persistence;
-- automated tests mock Gemini.
-
-## Why This Architecture
-
-The architecture is intentionally smaller than full enterprise Clean
-Architecture.
-
-It provides separation of concerns and testability while remaining appropriate
-for a time-bounded take-home assessment.
+This is intentionally not full Clean Architecture, DDD, or a DI framework. The structure keeps concrete external details outside business modules without adding unnecessary layers.

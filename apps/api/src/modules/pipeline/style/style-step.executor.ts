@@ -1,7 +1,7 @@
 import { PipelineError } from '../pipeline.errors.js'
 import { PIPELINE_STEPS } from '../pipeline.constants.js'
 import type { PipelineExecutor } from '../pipeline.service.js'
-import type { GeminiStyleAdapter } from '../../../services/gemini/gemini-style-adapter.js'
+import type { GeminiStyleAdapter } from '../../../infrastructure/gemini/gemini-style-adapter.js'
 import { generatedStyleSchema, manualStyleSchema } from './style.schema.js'
 import { StyleRepository } from './style.repository.js'
 

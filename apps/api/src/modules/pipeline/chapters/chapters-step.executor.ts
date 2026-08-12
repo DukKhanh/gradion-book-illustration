@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import type { GeminiChapterAdapter } from '../../../services/gemini/gemini-chapter-adapter.js'
+import type { GeminiChapterAdapter } from '../../../infrastructure/gemini/gemini-chapter-adapter.js'
 import { PIPELINE_STEPS } from '../pipeline.constants.js'
 import { PipelineError } from '../pipeline.errors.js'
 import type { PipelineExecutor } from '../pipeline.service.js'

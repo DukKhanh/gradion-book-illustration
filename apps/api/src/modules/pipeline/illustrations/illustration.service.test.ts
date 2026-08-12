@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import type { FileStorageService } from '../../../storage/file-storage.service.js'
+import type { FileStorageService } from '../../../infrastructure/storage/file-storage.service.js'
 import { IllustrationsRepository } from './illustrations.repository.js'
 import { IllustrationService } from './illustration.service.js'
 
@@ -26,7 +26,7 @@ describe('IllustrationService', () => {
 describe('illustration local storage', () => {
   it('uses a Windows-safe run-scoped chapter path', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'gradion-illustration-'))
-    const { FileStorageService } = await import('../../../storage/file-storage.service.js')
+const { FileStorageService } = await import('../../../infrastructure/storage/file-storage.service.js')
     try {
       const path = await new FileStorageService(directory, directory).writeIllustration({
         userId: 'user-1', projectId: 'project-1', chapterId: 'chapter-1',

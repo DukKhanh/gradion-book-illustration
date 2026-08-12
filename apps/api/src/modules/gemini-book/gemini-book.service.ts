@@ -1,5 +1,5 @@
 import { HttpError } from '../../shared/http-error.js'
-import type { GeminiBookAdapter } from '../../services/gemini/gemini-book-adapter.js'
+import type { GeminiBookAdapter } from '../../infrastructure/gemini/gemini-book-adapter.js'
 
 export type GeminiBookState = 'IDLE' | 'RUNNING' | 'FAILED' | 'READY'
 

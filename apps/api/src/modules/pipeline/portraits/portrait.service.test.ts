@@ -5,7 +5,7 @@ import { join } from 'node:path'
 
 import { PortraitService } from './portrait.service.js'
 import { PortraitsRepository } from './portraits.repository.js'
-import { FileStorageService } from '../../../storage/file-storage.service.js'
+import { FileStorageService } from '../../../infrastructure/storage/file-storage.service.js'
 
 describe('PortraitService', () => {
   it('returns only an owned durable portrait file', async () => {

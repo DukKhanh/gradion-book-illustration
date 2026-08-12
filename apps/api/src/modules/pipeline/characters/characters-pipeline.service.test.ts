@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { PIPELINE_STEPS, STEP_STATES } from '../pipeline.constants.js'
 import { PipelineService, type PipelineProject, type PipelineRepository } from '../pipeline.service.js'
 import type { PipelineStep } from '../pipeline.types.js'
-import type { GeminiCharactersAdapter } from '../../../services/gemini/gemini-characters-adapter.js'
+import type { GeminiCharactersAdapter } from '../../../infrastructure/gemini/gemini-characters-adapter.js'
 import { CharactersRepository } from './characters.repository.js'
 import { CharactersStepExecutor } from './characters-step.executor.js'
 

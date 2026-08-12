@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import type { GeminiCharactersAdapter } from '../../../services/gemini/gemini-characters-adapter.js'
+import type { GeminiCharactersAdapter } from '../../../infrastructure/gemini/gemini-characters-adapter.js'
 import { manualStyleSchema } from '../style/style.schema.js'
 import { PIPELINE_STEPS } from '../pipeline.constants.js'
 import { PipelineError } from '../pipeline.errors.js'

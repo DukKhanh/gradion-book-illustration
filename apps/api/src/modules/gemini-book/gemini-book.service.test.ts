@@ -6,7 +6,7 @@ import {
   vi,
 } from 'vitest'
 
-import type { GeminiBookAdapter } from '../../services/gemini/gemini-book-adapter.js'
+import type { GeminiBookAdapter } from '../../infrastructure/gemini/gemini-book-adapter.js'
 import {
   GeminiBookService,
   type GeminiBookProject,

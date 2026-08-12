@@ -5,7 +5,7 @@ import {
   vi,
 } from 'vitest'
 
-import type { FileStorageService } from '../../storage/file-storage.service.js'
+import type { FileStorageService } from '../../infrastructure/storage/file-storage.service.js'
 import type { ProjectRepository } from './project.repository.js'
 import { ProjectService } from './project.service.js'
 

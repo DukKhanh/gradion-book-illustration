@@ -30,7 +30,9 @@ The application is designed to run locally and keeps pipeline progress, generate
 - **Gemini text model:** `gemini-3.6-flash`
 - **Gemini image model:** `gemini-3.1-flash-lite-image`
 
-The backend follows a modular-monolith structure:
+The application is a modular monolith using reduced Clean Architecture principles: feature-oriented frontend modules, constructor-injected backend boundaries, and infrastructure adapters.
+
+The backend dependency flow is:
 
 ```text
 Route
@@ -41,6 +43,8 @@ Service
   ↓
 Repository / Gemini Adapter / FileStorageService
 ```
+
+The frontend keeps application composition in `apps/web/src/app`, feature APIs and UI in `features`, shared HTTP/types in `api`, and app-wide visual primitives in `styles`. Gemini and filesystem implementations live under `apps/api/src/infrastructure`; the API composition factory wires them to the feature modules without a DI framework.
 
 Pipeline state is persisted and remains server-authoritative:
 

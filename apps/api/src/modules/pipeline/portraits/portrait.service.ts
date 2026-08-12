@@ -1,5 +1,5 @@
 import { HttpError } from '../../../shared/http-error.js'
-import { FileStorageService } from '../../../storage/file-storage.service.js'
+import { FileStorageService } from '../../../infrastructure/storage/file-storage.service.js'
 import { PortraitsRepository } from './portraits.repository.js'
 
 export class PortraitService {

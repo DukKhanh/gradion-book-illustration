@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 
 import { HttpError } from '../../shared/http-error.js'
-import { FileStorageService } from '../../storage/file-storage.service.js'
+import { FileStorageService } from '../../infrastructure/storage/file-storage.service.js'
 import type { ProjectChapterRecord, ProjectCharacterRecord, ProjectRecord } from './project.repository.js'
 import { ProjectRepository } from './project.repository.js'
 

@@ -1,4 +1,4 @@
-import type { GeminiIllustrationAdapter, IllustrationCharacterReference } from '../../../services/gemini/gemini-illustration-adapter.js'
+import type { GeminiIllustrationAdapter, IllustrationCharacterReference } from '../../../infrastructure/gemini/gemini-illustration-adapter.js'
 import { chapterNameSchema, chapterPromptSchema } from '../chapters/chapters.schema.js'
 import { PIPELINE_STEPS } from '../pipeline.constants.js'
 import { PipelineError } from '../pipeline.errors.js'

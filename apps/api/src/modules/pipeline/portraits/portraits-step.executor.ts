@@ -2,7 +2,7 @@ import { manualStyleSchema } from '../style/style.schema.js'
 import { PIPELINE_STEPS } from '../pipeline.constants.js'
 import { PipelineError } from '../pipeline.errors.js'
 import type { PipelineExecutor } from '../pipeline.service.js'
-import type { GeminiPortraitAdapter } from '../../../services/gemini/gemini-portrait-adapter.js'
+import type { GeminiPortraitAdapter } from '../../../infrastructure/gemini/gemini-portrait-adapter.js'
 import { PortraitsRepository, type PortraitProject } from './portraits.repository.js'
 
 const PREREQUISITE_ERROR = 'CHARACTERS and STYLE are required before PORTRAITS can run.'

@@ -5,7 +5,7 @@ import {
   vi,
 } from 'vitest'
 
-import type { FileStorageService } from '../../infrastructure/storage/file-storage.service.js'
+import type { BookStorage } from './book-storage.port.js'
 import type { ProjectRepository } from './project.repository.js'
 import { ProjectService } from './project.service.js'
 
@@ -15,7 +15,7 @@ describe('ProjectService', () => {
     const storage = {
       writeBook: vi.fn().mockResolvedValue(bookPath),
       deleteBook: vi.fn().mockResolvedValue(undefined),
-    } as unknown as FileStorageService
+    } as unknown as BookStorage
     const projects = {
       create: vi.fn().mockRejectedValue(new Error('database unavailable')),
     } as unknown as ProjectRepository
@@ -60,7 +60,7 @@ describe('ProjectService', () => {
       listCharactersForProjectForUser: vi.fn().mockResolvedValue([]),
       listChaptersForProjectForUser: vi.fn().mockResolvedValue([]),
     } as unknown as ProjectRepository
-    const service = new ProjectService(projects, {} as FileStorageService)
+    const service = new ProjectService(projects, {} as BookStorage)
 
     const detail = await service.detail('user-1', 'project-1')
 
@@ -80,7 +80,7 @@ describe('ProjectService', () => {
     } as unknown as ProjectRepository
     const storage = {
       readBook: vi.fn().mockResolvedValue('Chapter One\n\nFull original text.'),
-    } as unknown as FileStorageService
+    } as unknown as BookStorage
     const service = new ProjectService(projects, storage)
 
     await expect(service.bookText('user-1', 'project-1'))
@@ -92,7 +92,7 @@ describe('ProjectService', () => {
     const projects = {
       findByIdForUser: vi.fn().mockResolvedValue(null),
     } as unknown as ProjectRepository
-    const storage = { readBook: vi.fn() } as unknown as FileStorageService
+    const storage = { readBook: vi.fn() } as unknown as BookStorage
     const service = new ProjectService(projects, storage)
 
     await expect(service.bookText('user-2', 'project-1')).rejects.toMatchObject({
@@ -111,7 +111,7 @@ describe('ProjectService', () => {
     } as unknown as ProjectRepository
     const storage = {
       readBook: vi.fn().mockRejectedValue(new Error('ENOENT')),
-    } as unknown as FileStorageService
+    } as unknown as BookStorage
     const service = new ProjectService(projects, storage)
 
     await expect(service.bookText('user-1', 'project-1')).rejects.toMatchObject({

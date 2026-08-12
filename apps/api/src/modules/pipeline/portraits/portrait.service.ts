@@ -1,11 +1,11 @@
 import { HttpError } from '../../../shared/http-error.js'
-import { FileStorageService } from '../../../infrastructure/storage/file-storage.service.js'
 import { PortraitsRepository } from './portraits.repository.js'
+import type { PortraitReader } from './portrait-reader.port.js'
 
 export class PortraitService {
   constructor(
     private readonly portraits: PortraitsRepository,
-    private readonly storage: FileStorageService,
+    private readonly storage: PortraitReader,
   ) {}
 
   async read(userId: string, projectId: string, characterId: string): Promise<Buffer> {

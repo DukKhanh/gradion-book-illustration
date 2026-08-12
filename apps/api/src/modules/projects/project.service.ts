@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 
 import { HttpError } from '../../shared/http-error.js'
-import { FileStorageService } from '../../infrastructure/storage/file-storage.service.js'
+import type { BookStorage } from './book-storage.port.js'
 import type { ProjectChapterRecord, ProjectCharacterRecord, ProjectRecord } from './project.repository.js'
 import { ProjectRepository } from './project.repository.js'
 
@@ -58,7 +58,7 @@ export type ProjectChapterDto = {
 export class ProjectService {
   constructor(
     private readonly projects: ProjectRepository,
-    private readonly storage: FileStorageService,
+    private readonly storage: BookStorage,
   ) {}
 
   async create(input: {

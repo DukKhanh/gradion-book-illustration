@@ -1,9 +1,9 @@
 import { HttpError } from '../../../shared/http-error.js'
-import { FileStorageService } from '../../../infrastructure/storage/file-storage.service.js'
 import { IllustrationsRepository } from './illustrations.repository.js'
+import type { IllustrationReader } from './illustration-reader.port.js'
 
 export class IllustrationService {
-  constructor(private readonly illustrations: IllustrationsRepository, private readonly storage: FileStorageService) {}
+  constructor(private readonly illustrations: IllustrationsRepository, private readonly storage: IllustrationReader) {}
 
   async read(userId: string, projectId: string, chapterId: string): Promise<Buffer> {
     const imagePath = await this.illustrations.findCompletedForUser({ projectId, userId, chapterId })

@@ -8,6 +8,13 @@ import {
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import type { GeminiBookStorage } from '../../modules/gemini-book/gemini-book.service.js'
+import type { IllustrationReader } from '../../modules/pipeline/illustrations/illustration-reader.port.js'
+import type { IllustrationStorage } from '../../modules/pipeline/illustrations/illustrations-step.executor.js'
+import type { PortraitReader } from '../../modules/pipeline/portraits/portrait-reader.port.js'
+import type { PortraitStorage } from '../../modules/pipeline/portraits/portraits-step.executor.js'
+import type { BookStorage } from '../../modules/projects/book-storage.port.js'
+
 const defaultBooksDirectory = fileURLToPath(
   new URL('../../../../data/books/', import.meta.url),
 )
@@ -15,7 +22,7 @@ const defaultImagesDirectory = fileURLToPath(
   new URL('../../../../data/images/', import.meta.url),
 )
 
-export class FileStorageService {
+export class FileStorageService implements BookStorage, GeminiBookStorage, PortraitStorage, PortraitReader, IllustrationStorage, IllustrationReader {
   constructor(
     private readonly booksDirectory = defaultBooksDirectory,
     private readonly imagesDirectory = defaultImagesDirectory,

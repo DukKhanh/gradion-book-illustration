@@ -9,7 +9,7 @@ import {
 import type { PipelineStep } from '../pipeline.types.js'
 import { StyleStepExecutor } from './style-step.executor.js'
 import type { StyleRepository } from './style.repository.js'
-import type { GeminiStyleAdapter } from '../../../infrastructure/gemini/gemini-style-adapter.js'
+import type { GeminiStyleAdapter } from './style-generator.port.js'
 
 class MemoryPipelineRepository implements PipelineRepository {
   completeResult = true

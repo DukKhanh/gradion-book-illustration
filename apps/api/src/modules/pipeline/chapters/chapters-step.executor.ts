@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import type { GeminiChapterAdapter } from '../../../infrastructure/gemini/gemini-chapter-adapter.js'
+import type { ChapterGenerator } from './chapter-generator.port.js'
 import { PIPELINE_STEPS } from '../pipeline.constants.js'
 import { PipelineError } from '../pipeline.errors.js'
 import type { PipelineExecutor } from '../pipeline.service.js'
@@ -14,7 +14,7 @@ const PERSISTENCE_ERROR = 'CHAPTERS could not be persisted.'
 export class ChaptersStepExecutor implements PipelineExecutor {
   constructor(
     private readonly chapters: ChaptersRepository,
-    private readonly gemini: GeminiChapterAdapter,
+    private readonly gemini: ChapterGenerator,
   ) {}
 
   async execute(input: Parameters<PipelineExecutor['execute']>[0]): Promise<void> {

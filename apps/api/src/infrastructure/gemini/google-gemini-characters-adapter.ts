@@ -1,9 +1,9 @@
 import { GoogleGenAI } from '@google/genai'
 
-import type { GeminiCharactersAdapter } from './gemini-characters-adapter.js'
+import type { CharacterGenerator } from '../../modules/pipeline/characters/character-generator.port.js'
 import { CHARACTERS_PROMPT } from './prompts/characters.prompt.js'
 
-export class GoogleGeminiCharactersAdapter implements GeminiCharactersAdapter {
+export class GoogleGeminiCharactersAdapter implements CharacterGenerator {
   private readonly client: GoogleGenAI
 
   constructor(

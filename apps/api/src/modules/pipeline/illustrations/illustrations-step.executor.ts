@@ -1,4 +1,4 @@
-import type { GeminiIllustrationAdapter, IllustrationCharacterReference } from '../../../infrastructure/gemini/gemini-illustration-adapter.js'
+import type { IllustrationCharacterReference, IllustrationGenerator } from './illustration-generator.port.js'
 import { chapterNameSchema, chapterPromptSchema } from '../chapters/chapters.schema.js'
 import { PIPELINE_STEPS } from '../pipeline.constants.js'
 import { PipelineError } from '../pipeline.errors.js'
@@ -18,7 +18,7 @@ export interface IllustrationStorage {
 }
 
 export class IllustrationsStepExecutor implements PipelineExecutor {
-  constructor(private readonly illustrations: IllustrationsRepository, private readonly gemini: GeminiIllustrationAdapter, private readonly storage: IllustrationStorage) {}
+constructor(private readonly illustrations: IllustrationsRepository, private readonly gemini: IllustrationGenerator, private readonly storage: IllustrationStorage) {}
 
   async execute(input: Parameters<PipelineExecutor['execute']>[0]): Promise<void> {
     if (input.step !== PIPELINE_STEPS.ILLUSTRATIONS) throw new Error('This pipeline step is not implemented.')

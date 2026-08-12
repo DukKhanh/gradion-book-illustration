@@ -1,8 +1,8 @@
 import { GoogleGenAI } from '@google/genai'
 
-import type { GeminiBookAdapter } from './gemini-book-adapter.js'
+import type { BookReferenceUploader } from '../../modules/gemini-book/book-reference-uploader.port.js'
 
-export class GoogleGeminiBookAdapter implements GeminiBookAdapter {
+export class GoogleGeminiBookAdapter implements BookReferenceUploader {
   private readonly client: GoogleGenAI
 
   constructor(apiKey: string | undefined) {

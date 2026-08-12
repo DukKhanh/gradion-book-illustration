@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import type { GeminiCharactersAdapter } from '../../../infrastructure/gemini/gemini-characters-adapter.js'
+import type { CharacterGenerator } from './character-generator.port.js'
 import { manualStyleSchema } from '../style/style.schema.js'
 import { PIPELINE_STEPS } from '../pipeline.constants.js'
 import { PipelineError } from '../pipeline.errors.js'
@@ -14,7 +14,7 @@ const PERSISTENCE_ERROR = 'CHARACTERS could not be persisted.'
 export class CharactersStepExecutor implements PipelineExecutor {
   constructor(
     private readonly characters: CharactersRepository,
-    private readonly gemini: GeminiCharactersAdapter,
+    private readonly gemini: CharacterGenerator,
   ) {}
 
   async execute(input: Parameters<PipelineExecutor['execute']>[0]): Promise<void> {

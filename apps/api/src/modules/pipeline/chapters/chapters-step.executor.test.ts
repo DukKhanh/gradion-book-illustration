@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { GeminiChapterAdapter } from '../../../infrastructure/gemini/gemini-chapter-adapter.js'
+import type { GeminiChapterAdapter } from './chapter-generator.port.js'
 import { PIPELINE_STEPS } from '../pipeline.constants.js'
 import type { PipelineExecutor } from '../pipeline.service.js'
 import { ChaptersRepository } from './chapters.repository.js'

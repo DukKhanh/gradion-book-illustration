@@ -1,9 +1,9 @@
 import { GoogleGenAI } from '@google/genai'
 
-import type { GeminiChapterAdapter } from './gemini-chapter-adapter.js'
+import type { ChapterGenerator } from '../../modules/pipeline/chapters/chapter-generator.port.js'
 import { CHAPTER_PROMPT } from './prompts/chapter.prompt.js'
 
-export class GoogleGeminiChapterAdapter implements GeminiChapterAdapter {
+export class GoogleGeminiChapterAdapter implements ChapterGenerator {
   private readonly client: GoogleGenAI
 
   constructor(private readonly apiKey: string | undefined, private readonly model: string) {

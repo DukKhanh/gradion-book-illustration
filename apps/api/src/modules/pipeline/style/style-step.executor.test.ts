@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { PIPELINE_STEPS } from '../pipeline.constants.js'
 import { StyleStepExecutor } from './style-step.executor.js'
 import type { StyleRepository } from './style.repository.js'
-import type { GeminiStyleAdapter } from '../../../infrastructure/gemini/gemini-style-adapter.js'
+import type { GeminiStyleAdapter } from './style-generator.port.js'
 
 const startedAt = new Date('2026-08-11T10:00:00.000Z')
 

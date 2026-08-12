@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { GeminiIllustrationAdapter } from '../../../infrastructure/gemini/gemini-illustration-adapter.js'
+import type { GeminiIllustrationAdapter } from './illustration-generator.port.js'
 import { PIPELINE_STEPS } from '../pipeline.constants.js'
 import type { PipelineExecutor } from '../pipeline.service.js'
 import { IllustrationsRepository } from './illustrations.repository.js'

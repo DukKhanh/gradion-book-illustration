@@ -1,5 +1,5 @@
 import { HttpError } from '../../shared/http-error.js'
-import type { GeminiBookAdapter } from '../../infrastructure/gemini/gemini-book-adapter.js'
+import type { BookReferenceUploader } from './book-reference-uploader.port.js'
 
 export type GeminiBookState = 'IDLE' | 'RUNNING' | 'FAILED' | 'READY'
 
@@ -59,7 +59,7 @@ export class GeminiBookService {
   constructor(
     private readonly repository: GeminiBookRepository,
     private readonly storage: GeminiBookStorage,
-    private readonly adapter: GeminiBookAdapter,
+    private readonly adapter: BookReferenceUploader,
     private readonly options: GeminiBookServiceOptions,
   ) {
     this.now = options.now ?? (() => new Date())

@@ -1,9 +1,9 @@
 import { GoogleGenAI } from '@google/genai'
 
-import type { GeminiPortraitAdapter } from './gemini-portrait-adapter.js'
+import type { PortraitGenerator } from '../../modules/pipeline/portraits/portrait-generator.port.js'
 import { portraitPrompt } from './prompts/portrait.prompt.js'
 
-export class GoogleGeminiPortraitAdapter implements GeminiPortraitAdapter {
+export class GoogleGeminiPortraitAdapter implements PortraitGenerator {
   private readonly client: GoogleGenAI
 
   constructor(

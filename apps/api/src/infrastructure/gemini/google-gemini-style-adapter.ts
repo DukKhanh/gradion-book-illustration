@@ -1,9 +1,9 @@
 import { GoogleGenAI } from '@google/genai'
 
-import type { GeminiStyleAdapter } from './gemini-style-adapter.js'
+import type { StyleGenerator } from '../../modules/pipeline/style/style-generator.port.js'
 import { STYLE_PROMPT } from './prompts/style.prompt.js'
 
-export class GoogleGeminiStyleAdapter implements GeminiStyleAdapter {
+export class GoogleGeminiStyleAdapter implements StyleGenerator {
   private readonly client: GoogleGenAI
   private readonly apiKey: string | undefined
 

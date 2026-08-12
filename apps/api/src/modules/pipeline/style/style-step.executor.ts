@@ -1,7 +1,7 @@
 import { PipelineError } from '../pipeline.errors.js'
 import { PIPELINE_STEPS } from '../pipeline.constants.js'
 import type { PipelineExecutor } from '../pipeline.service.js'
-import type { GeminiStyleAdapter } from '../../../infrastructure/gemini/gemini-style-adapter.js'
+import type { StyleGenerator } from './style-generator.port.js'
 import { generatedStyleSchema, manualStyleSchema } from './style.schema.js'
 import { StyleRepository } from './style.repository.js'
 
@@ -11,7 +11,7 @@ const STYLE_PERSISTENCE_ERROR = 'STYLE could not be persisted.'
 export class StyleStepExecutor implements PipelineExecutor {
   constructor(
     private readonly styles: StyleRepository,
-    private readonly gemini: GeminiStyleAdapter,
+    private readonly gemini: StyleGenerator,
   ) {}
 
   async execute(input: Parameters<PipelineExecutor['execute']>[0]): Promise<void> {

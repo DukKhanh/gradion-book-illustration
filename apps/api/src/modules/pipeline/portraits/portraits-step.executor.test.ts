@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { PIPELINE_STEPS } from '../pipeline.constants.js'
 import type { PipelineExecutor } from '../pipeline.service.js'
-import type { GeminiPortraitAdapter } from '../../../infrastructure/gemini/gemini-portrait-adapter.js'
+import type { GeminiPortraitAdapter } from './portrait-generator.port.js'
 import { PortraitsRepository } from './portraits.repository.js'
 import { PortraitsStepExecutor, type PortraitStorage } from './portraits-step.executor.js'
 

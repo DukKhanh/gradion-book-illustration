@@ -1,9 +1,9 @@
 import { GoogleGenAI } from '@google/genai'
 
-import type { GeminiIllustrationAdapter, IllustrationCharacterReference } from './gemini-illustration-adapter.js'
+import type { IllustrationCharacterReference, IllustrationGenerator } from '../../modules/pipeline/illustrations/illustration-generator.port.js'
 import { illustrationPrompt } from './prompts/illustration.prompt.js'
 
-export class GoogleGeminiIllustrationAdapter implements GeminiIllustrationAdapter {
+export class GoogleGeminiIllustrationAdapter implements IllustrationGenerator {
   private readonly client: GoogleGenAI
 
   constructor(private readonly apiKey: string | undefined, private readonly model: string) {

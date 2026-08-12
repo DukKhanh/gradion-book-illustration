@@ -2,7 +2,7 @@ import { manualStyleSchema } from '../style/style.schema.js'
 import { PIPELINE_STEPS } from '../pipeline.constants.js'
 import { PipelineError } from '../pipeline.errors.js'
 import type { PipelineExecutor } from '../pipeline.service.js'
-import type { GeminiPortraitAdapter } from '../../../infrastructure/gemini/gemini-portrait-adapter.js'
+import type { PortraitGenerator } from './portrait-generator.port.js'
 import { PortraitsRepository, type PortraitProject } from './portraits.repository.js'
 
 const PREREQUISITE_ERROR = 'CHARACTERS and STYLE are required before PORTRAITS can run.'
@@ -17,7 +17,7 @@ export interface PortraitStorage {
 export class PortraitsStepExecutor implements PipelineExecutor {
   constructor(
     private readonly portraits: PortraitsRepository,
-    private readonly gemini: GeminiPortraitAdapter,
+    private readonly gemini: PortraitGenerator,
     private readonly storage: PortraitStorage,
   ) {}
 

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
-import { getProjectBookText } from '../../api/projects'
+import { getProjectBookText } from '../api/projects.api'
 
 type BookTextDisclosureProps = {
   projectId: string

@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 
-import { getSession, identify, sessionKey, signOut } from '../../api/session'
+import { getSession, identify, sessionKey, signOut } from './api/session.api'
 import type { UserDto } from '../../api/types'
 
 type SessionContextValue = {

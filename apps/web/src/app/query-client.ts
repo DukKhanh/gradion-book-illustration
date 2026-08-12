@@ -1,7 +1,7 @@
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
 
-import { HttpError } from './api/client'
-import { sessionKey } from './api/session'
+import { HttpError } from '../api/client'
+import { sessionKey } from '../features/session/api/session.api'
 
 function handleUnauthorized(error: unknown, queryClient: QueryClient) {
   if (!(error instanceof HttpError) || error.status !== 401) return

@@ -16,11 +16,11 @@ import {
   vi,
 } from 'vitest'
 
-import { getProjectBookText } from '../../api/projects'
+import { getProjectBookText } from '../api/projects.api'
 import { BookTextDisclosure } from './BookTextDisclosure'
 
 vi.mock(
-  '../../api/projects',
+  '../api/projects.api',
   () => ({
     getProjectBookText:
       vi.fn(),

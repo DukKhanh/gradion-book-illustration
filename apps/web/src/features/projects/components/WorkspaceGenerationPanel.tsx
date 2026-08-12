@@ -6,9 +6,9 @@ import {
   recoverGeminiBook,
   recoverPipeline,
   runPipelineStep,
-} from '../../api/generation'
-import type { ProjectDetailDto, PipelineStep } from '../../api/types'
-import { nextPipelineStep, retryPipelineStep } from './generation'
+} from '../api/generation.api'
+import type { ProjectDetailDto, PipelineStep } from '../../../api/types'
+import { nextPipelineStep, retryPipelineStep } from '../utils/generation'
 
 const PORTRAIT_POLL_INTERVAL_MS = 1_500
 

@@ -1,5 +1,5 @@
-import type { PipelineDto, PipelineStep } from '../../api/types'
-import { pipelineStepPresentation } from './progress'
+import type { PipelineDto, PipelineStep } from '../../../api/types'
+import { pipelineStepPresentation } from '../utils/progress'
 
 const labels: Record<PipelineStep, string> = {
   STYLE: 'Style',

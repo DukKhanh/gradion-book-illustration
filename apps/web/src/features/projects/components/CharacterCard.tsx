@@ -1,4 +1,4 @@
-import type { CharacterDto } from '../../api/types'
+import type { CharacterDto } from '../../../api/types'
 import { PromptDisclosure } from './PromptDisclosure'
 
 type CharacterCardProps = {

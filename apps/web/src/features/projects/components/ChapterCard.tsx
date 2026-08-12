@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import type { ProjectDetailDto } from '../../api/types'
+import type { ProjectDetailDto } from '../../../api/types'
 import { PromptDisclosure } from './PromptDisclosure'
 
 type Chapter = ProjectDetailDto['chapters'][number]

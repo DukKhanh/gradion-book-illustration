@@ -1,4 +1,4 @@
-import type { PipelineDto, PipelineStep } from '../../api/types'
+import type { PipelineDto, PipelineStep } from '../../../api/types'
 
 export const PIPELINE_STEPS: PipelineStep[] = [
   'STYLE', 'CHARACTERS', 'PORTRAITS', 'CHAPTERS', 'ILLUSTRATIONS',

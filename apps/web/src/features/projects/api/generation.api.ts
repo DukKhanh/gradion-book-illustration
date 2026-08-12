@@ -1,5 +1,5 @@
-import { apiRequest } from './client'
-import type { PipelineStep } from './types'
+import { apiRequest } from '../../../api/client'
+import type { PipelineStep } from '../../../api/types'
 
 export function initializeGeminiBook(projectId: string): Promise<void> {
   return apiRequest<void>(`/projects/${projectId}/gemini-book`, { method: 'POST' })

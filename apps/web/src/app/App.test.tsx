@@ -18,9 +18,9 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 
 import App from './App'
-import { SessionProvider } from './features/session/SessionProvider'
+import { SessionProvider } from '../features/session/SessionProvider'
 import { queryClient } from './query-client'
-import { sessionKey } from './api/session'
+import { sessionKey } from '../features/session/api/session.api'
 
 const user = {
   id: 'user-1',

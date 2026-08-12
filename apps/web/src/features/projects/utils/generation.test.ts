@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { PipelineDto } from '../../api/types'
+import type { PipelineDto } from '../../../api/types'
 import { nextPipelineStep, retryPipelineStep } from './generation'
 
 function pipeline(completedStep: PipelineDto['completedStep'], stepState: PipelineDto['stepState'] = 'IDLE', runningStep: PipelineDto['runningStep'] = null): PipelineDto {

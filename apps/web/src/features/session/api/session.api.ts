@@ -1,5 +1,5 @@
-import { apiRequest, HttpError } from './client'
-import type { UserDto } from './types'
+import { apiRequest, HttpError } from '../../../api/client'
+import type { UserDto } from '../../../api/types'
 
 export const sessionKey = ['session'] as const
 

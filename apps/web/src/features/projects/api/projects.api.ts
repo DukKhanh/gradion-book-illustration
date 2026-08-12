@@ -1,5 +1,5 @@
-import { apiRequest } from './client'
-import type { ProjectDetailDto, ProjectDto } from './types'
+import { apiRequest } from '../../../api/client'
+import type { ProjectDetailDto, ProjectDto } from '../../../api/types'
 
 export async function listProjects(): Promise<ProjectDto[]> {
   const result = await apiRequest<{ projects: ProjectDto[] }>('/projects')

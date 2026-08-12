@@ -2,11 +2,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { runPipelineStep } from '../../api/generation'
-import type { ProjectDetailDto } from '../../api/types'
+import { runPipelineStep } from '../api/generation.api'
+import type { ProjectDetailDto } from '../../../api/types'
 import { WorkspaceGenerationPanel } from './WorkspaceGenerationPanel'
 
-vi.mock('../../api/generation', () => ({
+vi.mock('../api/generation.api', () => ({
   initializeGeminiBook: vi.fn(),
   recoverGeminiBook: vi.fn(),
   recoverPipeline: vi.fn(),

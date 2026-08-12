@@ -1,4 +1,4 @@
-import type { PipelineDto, PipelineStep } from '../../api/types'
+import type { PipelineDto, PipelineStep } from '../../../api/types'
 import { PIPELINE_STEPS } from './progress'
 
 export function nextPipelineStep(pipeline: PipelineDto): PipelineStep | null {

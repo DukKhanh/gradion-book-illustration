@@ -75,7 +75,6 @@ describe('identity and projects HTTP API', () => {
         gemini_book_state text not null default 'IDLE',
         gemini_book_started_at integer,
         gemini_book_error text,
-        gemini_book_interaction_id text,
         created_at integer not null,
         updated_at integer not null
       )

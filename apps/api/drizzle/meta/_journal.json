@@ -36,6 +36,13 @@
       "when": 1786450000000,
       "tag": "0005_chapter_position_zero",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1786656000000,
+      "tag": "0006_remove_gemini_interaction_id",
+      "breakpoints": true
     }
   ]
 }

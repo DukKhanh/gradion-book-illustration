@@ -656,7 +656,6 @@ The current implementation:
 - keeps active Gemini credentials in local environment configuration;
 - ignores `.env`;
 - does not expose provider file URIs in project DTOs;
-- does not expose Gemini interaction identifiers;
 - does not expose source-book filesystem paths;
 - does not expose generated-image filesystem paths;
 - scopes project resources to the authenticated owner.

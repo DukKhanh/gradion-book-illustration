@@ -54,7 +54,6 @@ describe('ProjectService', () => {
         geminiBookStartedAt: startedAt,
         geminiBookError: 'Gemini book preparation failed.',
         geminiBookFileUri: 'provider://private-file',
-        geminiBookInteractionId: 'private-interaction',
         bookFilePath: 'data/books/user-1/project-1/book.txt',
       }),
       listCharactersForProjectForUser: vi.fn().mockResolvedValue([]),
@@ -70,7 +69,6 @@ describe('ProjectService', () => {
       error: 'Gemini book preparation failed.',
     })
     expect(detail).not.toHaveProperty('geminiBookFileUri')
-    expect(detail).not.toHaveProperty('geminiBookInteractionId')
     expect(detail).not.toHaveProperty('bookFilePath')
   })
   it('reads the full owned book text from private local storage', async () => {

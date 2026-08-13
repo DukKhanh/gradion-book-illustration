@@ -72,10 +72,6 @@ export const projects = sqliteTable(
 
     geminiBookError: text('gemini_book_error'),
 
-    geminiBookInteractionId: text(
-      'gemini_book_interaction_id',
-    ),
-
     createdAt: integer('created_at', {
       mode: 'timestamp_ms',
     }).notNull(),

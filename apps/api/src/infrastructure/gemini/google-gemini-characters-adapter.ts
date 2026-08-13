@@ -2,6 +2,30 @@ import { GoogleGenAI } from '@google/genai'
 
 import type { CharacterGenerator } from '../../modules/pipeline/characters/character-generator.port.js'
 import { CHARACTERS_PROMPT } from './prompts/characters.prompt.js'
+import { parseJsonResponse } from './google-gemini-response.js'
+
+const CHARACTERS_SCHEMA = {
+  type: 'object',
+  properties: {
+    characters: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 2,
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          prompt: { type: 'string' },
+          isAdult: { type: 'boolean', enum: [true] },
+        },
+        required: ['name', 'prompt', 'isAdult'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['characters'],
+  additionalProperties: false,
+} as const
 
 export class GoogleGeminiCharactersAdapter implements CharacterGenerator {
   private readonly client: GoogleGenAI
@@ -20,41 +44,23 @@ export class GoogleGeminiCharactersAdapter implements CharacterGenerator {
     if (!this.apiKey?.trim()) {
       throw new Error('Gemini API key is not configured.')
     }
-    const interaction = await this.client.interactions.create({
+
+    const response = await this.client.models.generateContent({
       model: this.model,
-      input: [
-        { type: 'text', text: CHARACTERS_PROMPT },
-        { type: 'text', text: `Art direction: ${input.style}` },
-        { type: 'document', uri: input.bookFileUri, mime_type: 'text/plain' },
-      ],
-      response_format: {
-        type: 'text',
-        mime_type: 'application/json',
-        schema: {
-          type: 'object',
-          properties: {
-            characters: {
-              type: 'array', minItems: 1, maxItems: 2,
-              items: {
-                type: 'object',
-                properties: {
-                  name: { type: 'string' },
-                  prompt: { type: 'string' },
-                  isAdult: { type: 'boolean', enum: [true] },
-                },
-                required: ['name', 'prompt', 'isAdult'],
-                additionalProperties: false,
-              },
-            },
-          },
-          required: ['characters'],
-          additionalProperties: false,
-        },
+      contents: [{
+        role: 'user',
+        parts: [
+          { text: CHARACTERS_PROMPT },
+          { text: `Art direction: ${input.style}` },
+          { fileData: { fileUri: input.bookFileUri, mimeType: 'text/plain' } },
+        ],
+      }],
+      config: {
+        responseMimeType: 'application/json',
+        responseJsonSchema: CHARACTERS_SCHEMA,
       },
     })
-    if (!interaction.output_text) {
-      throw new Error('Gemini did not return CHARACTERS output.')
-    }
-    return JSON.parse(interaction.output_text)
+
+    return parseJsonResponse(response, 'CHARACTERS')
   }
 }

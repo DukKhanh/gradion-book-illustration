@@ -512,73 +512,67 @@ checkpoint abstraction.
 
 ---
 
-## Decision 6 — Persist a Gemini Files API URI instead of inventing a context object
+## Decision 6 — Use a reusable Files API URI with stateless `generateContent` calls
 
 ### Context
 
 The initial persistence model included an opaque Gemini interaction identifier,
-which could suggest creating a provider interaction, cache, or separate context
-object while preparing the book.
+which suggested that later steps might depend on provider-retained interaction
+state.
 
-During Phase 6 design, that assumption was challenged against the actual Gemini
-API behavior.
+That does not match the final pipeline design. Every downstream step can
+reconstruct its complete input from application-owned durable results:
 
-The Gemini Files API already returns a reusable file URI after upload.
+```text
+STYLE         → persisted project style
+CHARACTERS    → persisted character rows
+PORTRAITS     → persisted JPEG files + per-character checkpoints
+CHAPTERS      → persisted chapter row
+ILLUSTRATIONS → persisted JPEG file + chapter checkpoint
+```
 
-Later model requests can reference that URI directly, so preparing the book
-does not require creating a second provider resource solely to represent
-"context."
+The Gemini Files API already provides a reusable file URI for the source book,
+so the book does not need a second provider object merely to represent context.
 
 ### Decision
 
-Prepare the remote book reference through one explicit provider operation:
+Treat Gemini as a stateless generation dependency:
 
 ```text
 Local persisted book.txt
 → Gemini Files API upload
-→ persist returned geminiBookFileUri
-→ READY
+→ persist geminiBookFileUri
+→ models.generateContent(...)
 ```
 
-The application stores:
+Text and image generation use `models.generateContent()` without a
+`previous_interaction_id` dependency. A later step depends on durable
+application-owned outputs rather than on Gemini retaining the interaction that
+produced them.
+
+Examples:
 
 ```text
-geminiBookFileUri
-```
-
-The existing:
-
-```text
-geminiBookInteractionId
-```
-
-remains nullable and unused.
-
-No provider interaction/cache object is created merely because an existing
-database field could hold one.
-
-Later text-generation steps reuse the persisted Files API URI directly where
-the book itself is required.
-
-For example:
-
-```text
-STYLE
 CHARACTERS
+= persisted STYLE + Gemini book file URI
+
+PORTRAITS
+= persisted STYLE + persisted character prompt
+
+CHAPTERS
+= persisted STYLE + persisted characters + Gemini book file URI
+
+ILLUSTRATIONS
+= persisted STYLE + persisted chapter + persisted portrait JPEGs
 ```
 
-can use the reusable book reference.
-
-PORTRAITS does not require the book URI because its image prompt derives from
-the already persisted STYLE and character portrait prompt.
+The obsolete `geminiBookInteractionId` field is removed from the current schema.
+No provider interaction/cache object is created for pipeline continuity.
 
 ### Remote-reference lifetime
 
-The Gemini file URI is a provider-managed temporary resource.
-
-It is not application storage.
-
-The application therefore distinguishes:
+The Gemini file URI is a provider-managed temporary resource, not durable
+application storage:
 
 ```text
 Local book.txt
@@ -588,47 +582,34 @@ Gemini file URI
 = reusable temporary provider reference
 ```
 
-The application does not silently refresh or re-upload a remote reference
-during unrelated generation work.
+The application does not silently refresh or re-upload the remote reference
+during an unrelated generation step. Reinitialization remains an explicit user
+action if the provider reference can no longer be used.
 
-If a later request determines that the provider reference can no longer be
-used, reinitialization must be an explicit user action.
+### Why not provider-managed interaction state?
+
+Using provider history would make retry and resume depend on a second source of
+workflow state. The application already needs durable checkpoints for paid-call
+control, partial recovery, local images, and deterministic ownership.
+
+Keeping the model calls stateless gives the pipeline:
+
+- explicit and inspectable inputs;
+- deterministic retry boundaries;
+- simpler unit tests;
+- no provider-retention dependency;
+- less coupling between workflow semantics and a Gemini API lifecycle.
+
+The trade-off is that some persisted context, such as STYLE, character prompts,
+or portrait images, is sent again when a downstream step needs it. That cost is
+accepted in exchange for durable, application-owned workflow state.
 
 ### Concurrency
 
-Book initialization itself is guarded by persisted execution state:
-
-```text
-IDLE
-RUNNING
-FAILED
-READY
-```
-
-and an atomic conditional SQLite acquisition.
-
-Only the caller that successfully acquires initialization may perform the
-Gemini upload.
-
-A project already in `READY` performs zero additional upload calls through the
-normal initialization action.
-
-### Trade-off
-
-This keeps the Gemini integration small and avoids building a speculative
-provider interaction/cache lifecycle before it is required.
-
-It also means that:
-
-```text
-READY
-```
-
-means the application successfully prepared and persisted the remote reference,
-not that the provider guarantees that resource will exist forever.
-
-The local book therefore remains necessary even after successful Gemini
-initialization.
+Book initialization and generation remain guarded by persisted execution state
+and atomic SQLite acquisition. Only the caller that acquires the corresponding
+operation may perform the paid provider call. This decision changes provider
+transport, not the established retry or checkpoint semantics.
 
 ---
 
@@ -644,7 +625,7 @@ The current final candidates are:
 3. Reduced Clean Architecture
 4. Failed-step preservation and retry semantics
 5. Durable paid-result checkpoint strategy
-6. Gemini Files API URI instead of speculative context infrastructure
+6. Reusable Gemini Files URI plus stateless generateContent calls
 ```
 
 Later implementation phases should not automatically create additional
